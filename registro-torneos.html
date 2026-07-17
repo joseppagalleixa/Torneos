@@ -1,0 +1,2528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Torneos OP">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#090B09">
+<title>One Piece · Torneos</title>
+<style>
+  html, body { margin:0; padding:0; background:#090B09; -webkit-tap-highlight-color: transparent; overscroll-behavior:none; }
+  body { min-height: 100vh; min-height: 100dvh; }
+  .boot-error { color:#fff; background:#090B09; min-height:100vh; padding:24px; font-family:-apple-system,sans-serif; font-size:14px; line-height:1.5; white-space:pre-wrap; box-sizing:border-box; }
+</style>
+<script>
+  window.__appMounted = false;
+  window.addEventListener('error', function (e) {
+    var root = document.getElementById('root');
+    if (root && !window.__appMounted) {
+      var msg = (e && e.message) ? e.message : String(e);
+      var loc = (e && e.filename) ? ('\n' + e.filename + ':' + e.lineno) : '';
+      root.innerHTML = '<div class="boot-error">No se pudo cargar la app.\n\n' + msg + loc + '\n\nManda esta captura para que la revisemos.</div>';
+    }
+  });
+  function cdnFail(name) {
+    var root = document.getElementById('root');
+    if (root) root.innerHTML = '<div class="boot-error">No se pudo cargar ' + name + ' desde internet (unpkg.com).\nRevisa tu conexión y vuelve a intentar.</div>';
+  }
+  setTimeout(function () {
+    if (!window.__appMounted) {
+      var root = document.getElementById('root');
+      if (root) root.innerHTML = '<div class="boot-error">La app no terminó de cargar (sin error detectado).\n\nRevisa tu conexión a internet y desliza hacia abajo para recargar la página.</div>';
+    }
+  }, 8000);
+</script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin onerror="cdnFail('React')"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin onerror="cdnFail('ReactDOM')"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin onerror="cdnFail('Babel')"></script>
+</head>
+<body>
+<div id="root"><div class="boot-error">Cargando…</div></div>
+<script type="text/babel" data-presets="react">
+
+const { useState, useEffect, useCallback, useRef, useContext, createContext, useMemo } = React;
+
+const storage = {
+  get: async (key) => {
+    try {
+      const v = localStorage.getItem(key);
+      if (v === null) return null;
+      return { key, value: v };
+    } catch (e) {
+      return null;
+    }
+  },
+  set: async (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+      return { key, value };
+    } catch (e) {
+      return null;
+    }
+  },
+};
+
+function IconBase({ size = 24, color = "currentColor", strokeWidth = 2, style, children }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      {children}
+    </svg>
+  );
+}
+function Plus(p) { return <IconBase {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></IconBase>; }
+function X(p) { return <IconBase {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></IconBase>; }
+function Trash2(p) { return <IconBase {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></IconBase>; }
+function Trophy(p) { return <IconBase {...p}><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h2a2 2 0 0 1-2 4"/><path d="M7 5H5a2 2 0 0 0 2 4"/></IconBase>; }
+function CalendarDays(p) { return <IconBase {...p}><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></IconBase>; }
+function Users(p) { return <IconBase {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>; }
+function Layers(p) { return <IconBase {...p}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></IconBase>; }
+function BarChart3(p) { return <IconBase {...p}><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></IconBase>; }
+function Camera(p) { return <IconBase {...p}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></IconBase>; }
+function ChevronDown(p) { return <IconBase {...p}><polyline points="6 9 12 15 18 9"/></IconBase>; }
+function ChevronUp(p) { return <IconBase {...p}><polyline points="18 15 12 9 6 15"/></IconBase>; }
+function Swords(p) { return <IconBase {...p}><line x1="4" y1="20" x2="20" y2="4"/><line x1="20" y1="20" x2="4" y2="4"/><line x1="4" y1="20" x2="7" y2="20"/><line x1="17" y1="20" x2="20" y2="20"/></IconBase>; }
+function Pencil(p) { return <IconBase {...p}><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></IconBase>; }
+function Download(p) { return <IconBase {...p}><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M4 21h16"/></IconBase>; }
+function Upload(p) { return <IconBase {...p}><path d="M12 3v12"/><polyline points="7 8 12 3 17 8"/><path d="M4 21h16"/></IconBase>; }
+function Dices(p) {
+  const c = (p && p.color) || "currentColor";
+  return <IconBase {...p}><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.2" fill={c} stroke="none"/><circle cx="16" cy="8" r="1.2" fill={c} stroke="none"/><circle cx="12" cy="12" r="1.2" fill={c} stroke="none"/><circle cx="8" cy="16" r="1.2" fill={c} stroke="none"/><circle cx="16" cy="16" r="1.2" fill={c} stroke="none"/></IconBase>;
+}
+function Archive(p) { return <IconBase {...p}><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9"/><line x1="10" y1="13" x2="14" y2="13"/></IconBase>; }
+function ArchiveRestore(p) { return <IconBase {...p}><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9"/><polyline points="9 15 12 12 15 15"/><line x1="12" y1="12" x2="12" y2="18"/></IconBase>; }
+function Flame(p) { return <IconBase {...p}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></IconBase>; }
+function FileSpreadsheet(p) { return <IconBase {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="13" x2="8" y2="21"/><line x1="12" y1="13" x2="12" y2="21"/></IconBase>; }
+
+
+const ImageViewerContext = createContext(null);
+
+const FONT_IMPORT = `
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap');
+input::placeholder, textarea::placeholder { color: #5C6961; opacity: 1; }
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); }
+select { color-scheme: dark; }
+input { color-scheme: dark; }
+`;
+
+const C = {
+  felt: "#090B09",
+  feltDark: "#050605",
+  feltLine: "#1B211D",
+  paper: "#141715",
+  paperShade: "#262E29",
+  inset: "#0D100E",
+  ink: "#ECE7DA",
+  inkSoft: "#87968D",
+  gold: "#D9B54A",
+  red: "#E2624B",
+  redTint: "#291712",
+  gray: "#6E7B73",
+  blue: "#4F8FEF",
+  blueTint: "#131F30",
+};
+
+const KEYS = { leaders: "leaders", decks: "decks", tournaments: "tournaments", cards: "cards" };
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function formatDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+// Calcula la racha actual y la mejor racha (de victorias y de derrotas) de una lista de partidas,
+// asumiendo que vienen ordenadas de más reciente a más antigua.
+function computeStreaks(matchesNewestFirst) {
+  if (matchesNewestFirst.length === 0) {
+    return { currentType: null, current: 0, bestWin: 0, bestLoss: 0 };
+  }
+  const currentType = matchesNewestFirst[0].result;
+  let current = 0;
+  for (const m of matchesNewestFirst) {
+    if (m.result === currentType) current += 1;
+    else break;
+  }
+  let bestWin = 0;
+  let bestLoss = 0;
+  let run = 0;
+  let runType = null;
+  const oldestFirst = [...matchesNewestFirst].reverse();
+  oldestFirst.forEach((m) => {
+    if (m.result === runType) {
+      run += 1;
+    } else {
+      runType = m.result;
+      run = 1;
+    }
+    if (runType === "win") bestWin = Math.max(bestWin, run);
+    else bestLoss = Math.max(bestLoss, run);
+  });
+  return { currentType, current, bestWin, bestLoss };
+}
+
+function ImageLightbox({ viewer, onClose }) {
+  if (!viewer) return null;
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(4,6,4,0.92)",
+        zIndex: 60,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <button
+        onClick={onClose}
+        aria-label="Cerrar"
+        style={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          background: "rgba(255,255,255,0.1)",
+          border: "none",
+          borderRadius: "50%",
+          width: 36,
+          height: 36,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+        }}
+      >
+        <X size={18} color="#fff" />
+      </button>
+      <img
+        src={viewer.src}
+        alt={viewer.label || ""}
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: "100%", maxHeight: "76vh", borderRadius: 12, boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}
+      />
+      {viewer.label && (
+        <div
+          style={{
+            marginTop: 14,
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: 14,
+            letterSpacing: "0.03em",
+            textTransform: "uppercase",
+            color: "#fff",
+          }}
+        >
+          {viewer.label}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function compressImage(file, maxDim = 320, quality = 0.72) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("No se pudo procesar la imagen"));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function App() {
+  const [leaders, setLeaders] = useState([]);
+  const [decks, setDecks] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
+  const [cardsLibrary, setCardsLibrary] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("tournaments");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const load = async (key, setter) => {
+        try {
+          const res = await storage.get(key, false);
+          if (res && res.value) setter(JSON.parse(res.value));
+        } catch (e) {
+          /* sin datos guardados aún */
+        }
+      };
+      await Promise.all([
+        load(KEYS.leaders, setLeaders),
+        load(KEYS.decks, setDecks),
+        load(KEYS.tournaments, setTournaments),
+        load(KEYS.cards, setCardsLibrary),
+      ]);
+      setLoading(false);
+    })();
+  }, []);
+
+  const persist = useCallback(async (key, setter, next) => {
+    setter(next);
+    try {
+      const result = await storage.set(key, JSON.stringify(next), false);
+      if (!result) setError("No se pudo guardar. Intenta de nuevo.");
+      else setError("");
+    } catch (e) {
+      setError("No se pudo guardar. Intenta de nuevo.");
+    }
+  }, []);
+
+  const saveLeaders = (next) => persist(KEYS.leaders, setLeaders, next);
+  const saveDecks = (next) => persist(KEYS.decks, setDecks, next);
+  const saveTournaments = (next) => persist(KEYS.tournaments, setTournaments, next);
+  const saveCardsLibrary = (next) => persist(KEYS.cards, setCardsLibrary, next);
+
+  const addLeader = (leader) => {
+    const next = [...leaders, leader];
+    saveLeaders(next);
+    return leader;
+  };
+  const updateLeader = (leader) => saveLeaders(leaders.map((l) => (l.id === leader.id ? leader : l)));
+  const deleteLeader = (id) => saveLeaders(leaders.filter((l) => l.id !== id));
+
+  const addCardToLibrary = (card) => {
+    const next = [...cardsLibrary, card];
+    saveCardsLibrary(next);
+    return card;
+  };
+  const deleteCardFromLibrary = (id) => saveCardsLibrary(cardsLibrary.filter((c) => c.id !== id));
+
+  const addDeck = (deck) => saveDecks([{ ...deck, archived: false }, ...decks]);
+  const updateDeck = (deck) => saveDecks(decks.map((d) => (d.id === deck.id ? deck : d)));
+  const deleteDeck = (id) => saveDecks(decks.filter((d) => d.id !== id));
+  const toggleArchiveDeck = (id) => saveDecks(decks.map((d) => (d.id === id ? { ...d, archived: !d.archived } : d)));
+
+  const addTournament = (t) => saveTournaments([t, ...tournaments].sort((a, b) => (a.date < b.date ? 1 : -1)));
+  const deleteTournament = (id) => saveTournaments(tournaments.filter((t) => t.id !== id));
+  const updateTournament = (id, updater) =>
+    saveTournaments(tournaments.map((t) => (t.id === id ? updater(t) : t)));
+
+  const leadersById = Object.fromEntries(leaders.map((l) => [l.id, l]));
+  const decksById = Object.fromEntries(decks.map((d) => [d.id, d]));
+
+  const [viewer, setViewer] = useState(null);
+  const openImage = (src, label) => {
+    if (src) setViewer({ src, label });
+  };
+
+  const importInputRef = useRef(null);
+
+  const exportData = () => {
+    try {
+      const payload = { leaders, decks, tournaments, cardsLibrary, exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `torneos-onepiece-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError("No se pudo exportar el respaldo.");
+    }
+  };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const okShape =
+        data &&
+        (Array.isArray(data.leaders) || Array.isArray(data.decks) || Array.isArray(data.tournaments) || Array.isArray(data.cardsLibrary));
+      if (!okShape) throw new Error("formato inválido");
+      const confirmed = window.confirm(
+        "Esto reemplazará tus líderes, cartas, mazos y torneos actuales por los del archivo. ¿Continuar?"
+      );
+      if (!confirmed) return;
+      if (Array.isArray(data.leaders)) await saveLeaders(data.leaders);
+      if (Array.isArray(data.decks)) await saveDecks(data.decks);
+      if (Array.isArray(data.tournaments)) await saveTournaments(data.tournaments);
+      if (Array.isArray(data.cardsLibrary)) await saveCardsLibrary(data.cardsLibrary);
+    } catch (err) {
+      setError("No se pudo importar el archivo. Verifica que sea un respaldo válido.");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <ImageViewerContext.Provider value={openImage}>
+      <div style={{ background: C.felt, minHeight: "100vh", fontFamily: "'IBM Plex Serif', serif" }}>
+        <style>{FONT_IMPORT}</style>
+
+        <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} style={{ display: "none" }} />
+
+        <Header onExport={exportData} onImportClick={() => importInputRef.current && importInputRef.current.click()} />
+
+        {error && (
+          <div
+            style={{
+              margin: "8px 16px 0",
+              color: "#F0A392",
+              fontSize: 12,
+              fontFamily: "'IBM Plex Mono', monospace",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <main style={{ padding: "14px 16px 96px" }}>
+          {loading ? (
+            <p
+              style={{
+                color: "#87968D",
+                textAlign: "center",
+                marginTop: 60,
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 13,
+              }}
+            >
+              Cargando…
+            </p>
+          ) : tab === "tournaments" ? (
+            <TournamentsTab
+              tournaments={tournaments}
+              decks={decks}
+              leaders={leaders}
+              leadersById={leadersById}
+              decksById={decksById}
+              onAddTournament={addTournament}
+              onDeleteTournament={deleteTournament}
+              onUpdateTournament={updateTournament}
+              onAddLeader={addLeader}
+            />
+          ) : tab === "decks" ? (
+            <DecksTab
+              leaders={leaders}
+              decks={decks}
+              cardsLibrary={cardsLibrary}
+              onAddCardToLibrary={addCardToLibrary}
+              onAddDeck={addDeck}
+              onUpdateDeck={updateDeck}
+              onDeleteDeck={deleteDeck}
+              onToggleArchiveDeck={toggleArchiveDeck}
+              onAddLeader={addLeader}
+            />
+          ) : tab === "leaders" ? (
+            <LeadersTab leaders={leaders} onAddLeader={addLeader} onUpdateLeader={updateLeader} onDeleteLeader={deleteLeader} />
+          ) : (
+            <StatsTab tournaments={tournaments} decks={decks} leadersById={leadersById} />
+          )}
+        </main>
+
+        <TabBar tab={tab} setTab={setTab} />
+
+        <ImageLightbox viewer={viewer} onClose={() => setViewer(null)} />
+      </div>
+    </ImageViewerContext.Provider>
+  );
+}
+
+/* ---------- Layout pieces ---------- */
+
+function Header({ onExport, onImportClick }) {
+  const iconBtnStyle = {
+    background: "none",
+    border: `1px solid ${C.feltLine}`,
+    borderRadius: 7,
+    width: 32,
+    height: 32,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+  };
+  return (
+    <header
+      style={{
+        background: C.feltDark,
+        borderBottom: `1px solid ${C.feltLine}`,
+        position: "sticky",
+        top: 0,
+        zIndex: 10,
+        padding: "20px 20px 16px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Swords size={20} color={C.gold} strokeWidth={2} />
+          <h1
+            style={{
+              fontFamily: "'Oswald', sans-serif",
+              fontWeight: 700,
+              fontSize: 20,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: C.paper,
+              margin: 0,
+            }}
+          >
+            One Piece · Torneos
+          </h1>
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={onImportClick} aria-label="Importar respaldo" style={iconBtnStyle} title="Importar respaldo">
+            <Upload size={14} color="#87968D" />
+          </button>
+          <button onClick={onExport} aria-label="Exportar respaldo" style={iconBtnStyle} title="Exportar respaldo">
+            <Download size={14} color="#87968D" />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function TabBar({ tab, setTab }) {
+  const items = [
+    { id: "tournaments", label: "Torneos", icon: Trophy },
+    { id: "decks", label: "Mazos", icon: Layers },
+    { id: "leaders", label: "Líderes", icon: Users },
+    { id: "stats", label: "Stats", icon: BarChart3 },
+  ];
+  return (
+    <nav
+      style={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: C.feltDark,
+        borderTop: `1px solid ${C.feltLine}`,
+        display: "flex",
+        zIndex: 15,
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+    >
+      {items.map(({ id, label, icon: Icon }) => {
+        const active = tab === id;
+        return (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            style={{
+              flex: 1,
+              background: "none",
+              border: "none",
+              padding: "10px 0 8px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 3,
+              cursor: "pointer",
+            }}
+          >
+            <Icon size={20} color={active ? C.gold : "#6E7B73"} strokeWidth={active ? 2.4 : 1.8} />
+            <span
+              style={{
+                fontFamily: "'Oswald', sans-serif",
+                fontSize: 10,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: active ? C.gold : "#6E7B73",
+              }}
+            >
+              {label}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+function ConfirmDialog({ open, title, message, confirmLabel = "Eliminar", onCancel, onConfirm }) {
+  if (!open) return null;
+  return (
+    <div
+      onClick={onCancel}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(4,6,4,0.72)",
+        zIndex: 70,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 28,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: C.paper,
+          borderRadius: 14,
+          padding: "20px 18px",
+          maxWidth: 320,
+          width: "100%",
+          boxShadow: "0 14px 32px rgba(0,0,0,0.5)",
+          border: `1px solid ${C.paperShade}`,
+        }}
+      >
+        <h3
+          style={{
+            fontFamily: "'Oswald', sans-serif",
+            fontWeight: 600,
+            fontSize: 16,
+            letterSpacing: "0.02em",
+            color: C.ink,
+            margin: "0 0 6px",
+          }}
+        >
+          {title}
+        </h3>
+        <p style={{ fontSize: 13, color: C.inkSoft, margin: 0, lineHeight: 1.4 }}>{message}</p>
+        <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              background: "none",
+              border: `1px solid ${C.paperShade}`,
+              borderRadius: 9,
+              padding: "10px 0",
+              color: C.inkSoft,
+              fontFamily: "'Oswald', sans-serif",
+              fontWeight: 600,
+              fontSize: 13,
+              letterSpacing: "0.02em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              flex: 1,
+              background: C.red,
+              border: "none",
+              borderRadius: 9,
+              padding: "10px 0",
+              color: "#fff",
+              fontFamily: "'Oswald', sans-serif",
+              fontWeight: 600,
+              fontSize: 13,
+              letterSpacing: "0.02em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sheet({ title, onClose, children }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(10,20,16,0.55)",
+        display: "flex",
+        alignItems: "flex-end",
+        zIndex: 30,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: C.paper,
+          width: "100%",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          borderRadius: "18px 18px 0 0",
+          padding: "10px 20px 28px",
+          boxShadow: "0 -8px 24px rgba(0,0,0,0.4)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "center", padding: "6px 0 4px" }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: C.paperShade }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h2
+            style={{
+              fontFamily: "'Oswald', sans-serif",
+              fontWeight: 600,
+              fontSize: 18,
+              letterSpacing: "0.03em",
+              textTransform: "uppercase",
+              color: C.ink,
+              margin: 0,
+            }}
+          >
+            {title}
+          </h2>
+          <button type="button" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+            <X size={20} color={C.inkSoft} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children, style }) {
+  return (
+    <div style={{ marginBottom: 12, ...style }}>
+      {label && (
+        <label
+          style={{
+            display: "block",
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: 10,
+            letterSpacing: "0.07em",
+            textTransform: "uppercase",
+            color: C.inkSoft,
+            marginBottom: 4,
+          }}
+        >
+          {label}
+        </label>
+      )}
+      {children}
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "10px 11px",
+  borderRadius: 8,
+  border: `1px solid ${C.paperShade}`,
+  background: "#0D100E",
+  fontSize: 14,
+  color: C.ink,
+  fontFamily: "'IBM Plex Serif', serif",
+  outline: "none",
+};
+
+const goldButton = {
+  width: "100%",
+  background: C.ink,
+  color: C.feltDark,
+  border: "none",
+  borderRadius: 10,
+  padding: "13px 0",
+  fontFamily: "'Oswald', sans-serif",
+  fontWeight: 600,
+  fontSize: 15,
+  letterSpacing: "0.03em",
+  textTransform: "uppercase",
+  cursor: "pointer",
+};
+
+/* Toggle de un solo ícono: azul = estado positivo, rojo = estado negativo */
+function IconToggle({ label, icon: Icon, value, onChange, onLabel, offLabel }) {
+  const color = value ? C.blue : C.red;
+  const tint = value ? C.blueTint : C.redTint;
+  return (
+    <Field label={label}>
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 9,
+          padding: "12px 0",
+          borderRadius: 10,
+          border: `1.5px solid ${color}`,
+          background: tint,
+          cursor: "pointer",
+        }}
+      >
+        <Icon size={19} color={color} strokeWidth={2.2} />
+        <span
+          style={{
+            fontFamily: "'Oswald', sans-serif",
+            fontWeight: 600,
+            fontSize: 13.5,
+            letterSpacing: "0.03em",
+            textTransform: "uppercase",
+            color,
+          }}
+        >
+          {value ? onLabel : offLabel}
+        </span>
+      </button>
+    </Field>
+  );
+}
+
+function Fab({ onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Agregar"
+      style={{
+        position: "fixed",
+        right: 20,
+        bottom: 88,
+        width: 54,
+        height: 54,
+        borderRadius: "50%",
+        background: C.ink,
+        border: "none",
+        boxShadow: "0 6px 16px rgba(0,0,0,0.35)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        zIndex: 12,
+      }}
+    >
+      <Plus size={24} color={C.feltDark} strokeWidth={2.5} />
+    </button>
+  );
+}
+
+function PhotoPicker({ value, onChange, size = 64, label = "Foto" }) {
+  const inputRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+
+  const handleFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const dataUrl = await compressImage(file);
+      onChange(dataUrl);
+    } catch (err) {
+      /* si falla, simplemente no se adjunta imagen */
+    } finally {
+      setBusy(false);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+      {value ? (
+        <div style={{ position: "relative" }}>
+          <img
+            src={value}
+            alt=""
+            style={{ width: size, height: size, objectFit: "cover", borderRadius: 8, border: `1px solid ${C.paperShade}` }}
+          />
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            style={{
+              position: "absolute",
+              top: -6,
+              right: -6,
+              width: 18,
+              height: 18,
+              borderRadius: "50%",
+              background: C.red,
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            <X size={11} color="#fff" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current && inputRef.current.click()}
+          disabled={busy}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: 8,
+            border: `1.5px dashed ${C.paperShade}`,
+            background: "#0D100E",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 2,
+            cursor: "pointer",
+            color: C.inkSoft,
+          }}
+        >
+          <Camera size={16} />
+          <span style={{ fontSize: 9 }}>{busy ? "..." : label}</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* Selector horizontal de líderes + alta rápida inline */
+function LeaderPicker({ leaders, value, onSelect, onAddLeader }) {
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState("");
+  const [photo, setPhoto] = useState(null);
+
+  const save = () => {
+    if (!name.trim()) return;
+    const leader = { id: uid(), name: name.trim(), photo };
+    onAddLeader(leader);
+    onSelect(leader.id);
+    setCreating(false);
+    setName("");
+    setPhoto(null);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+        {leaders.map((l) => {
+          const active = value === l.id;
+          return (
+            <button
+              type="button"
+              key={l.id}
+              onClick={() => onSelect(l.id)}
+              style={{
+                flexShrink: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                width: 60,
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: active ? `3px solid ${C.gold}` : `1.5px solid ${C.paperShade}`,
+                  background: "#0D100E",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {l.photo ? (
+                  <img src={l.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <Users size={20} color={C.inkSoft} />
+                )}
+              </div>
+              <span
+                style={{
+                  fontSize: 9.5,
+                  color: active ? C.ink : C.inkSoft,
+                  fontWeight: active ? 600 : 400,
+                  textAlign: "center",
+                  lineHeight: 1.15,
+                  overflowWrap: "break-word",
+                }}
+              >
+                {l.name}
+              </span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 4,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            width: 60,
+          }}
+        >
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              border: `1.5px dashed ${C.paperShade}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Plus size={20} color={C.inkSoft} />
+          </div>
+          <span style={{ fontSize: 9.5, color: C.inkSoft }}>Nuevo</span>
+        </button>
+      </div>
+
+      {creating && (
+        <div style={{ marginTop: 10, padding: 10, background: "#0D100E", borderRadius: 8, border: `1px solid ${C.paperShade}` }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <PhotoPicker value={photo} onChange={setPhoto} size={52} label="Líder" />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nombre del líder"
+              style={{ ...inputStyle, flex: 1 }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={save}
+              style={{ ...goldButton, padding: "8px 0", fontSize: 12, flex: 1 }}
+            >
+              Guardar líder
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCreating(false);
+                setName("");
+                setPhoto(null);
+              }}
+              style={{
+                flex: 1,
+                background: "none",
+                border: `1px solid ${C.paperShade}`,
+                borderRadius: 10,
+                fontSize: 12,
+                color: C.inkSoft,
+                cursor: "pointer",
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Selector de cartas de la biblioteca + alta rápida inline */
+function CardPicker({ cards, value, onSelect, onAddCard }) {
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState("");
+  const [photo, setPhoto] = useState(null);
+
+  const save = () => {
+    if (!name.trim()) return;
+    const card = { id: uid(), name: name.trim(), photo };
+    onAddCard(card);
+    onSelect(card.id);
+    setCreating(false);
+    setName("");
+    setPhoto(null);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+        {cards.map((c) => {
+          const active = value === c.id;
+          return (
+            <button
+              type="button"
+              key={c.id}
+              onClick={() => onSelect(c.id)}
+              style={{
+                flexShrink: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                width: 54,
+              }}
+            >
+              <div
+                style={{
+                  width: 46,
+                  height: 62,
+                  borderRadius: 6,
+                  overflow: "hidden",
+                  border: active ? `3px solid ${C.gold}` : `1.5px solid ${C.paperShade}`,
+                  background: "#0D100E",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {c.photo ? (
+                  <img src={c.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <Layers size={18} color={C.inkSoft} />
+                )}
+              </div>
+              <span
+                style={{
+                  fontSize: 9.5,
+                  color: active ? C.ink : C.inkSoft,
+                  fontWeight: active ? 600 : 400,
+                  textAlign: "center",
+                  lineHeight: 1.15,
+                  overflowWrap: "break-word",
+                }}
+              >
+                {c.name}
+              </span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 4,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            width: 54,
+          }}
+        >
+          <div
+            style={{
+              width: 46,
+              height: 62,
+              borderRadius: 6,
+              border: `1.5px dashed ${C.paperShade}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Plus size={20} color={C.inkSoft} />
+          </div>
+          <span style={{ fontSize: 9.5, color: C.inkSoft }}>Nueva</span>
+        </button>
+      </div>
+
+      {creating && (
+        <div style={{ marginTop: 10, padding: 10, background: "#0D100E", borderRadius: 8, border: `1px solid ${C.paperShade}` }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <PhotoPicker value={photo} onChange={setPhoto} size={52} label="Carta" />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nombre de la carta"
+              style={{ ...inputStyle, flex: 1 }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button type="button" onClick={save} style={{ ...goldButton, padding: "8px 0", fontSize: 12, flex: 1 }}>
+              Guardar carta
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCreating(false);
+                setName("");
+                setPhoto(null);
+              }}
+              style={{
+                flex: 1,
+                background: "none",
+                border: `1px solid ${C.paperShade}`,
+                borderRadius: 10,
+                fontSize: 12,
+                color: C.inkSoft,
+                cursor: "pointer",
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Leaders tab ---------- */
+
+function LeadersTab({ leaders, onAddLeader, onUpdateLeader, onDeleteLeader }) {
+  const openImage = useContext(ImageViewerContext);
+  const [sheet, setSheet] = useState(false);
+  const [editingLeader, setEditingLeader] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  return (
+    <div>
+      <p style={{ color: "#87968D", fontSize: 12.5, marginTop: 0, marginBottom: 14 }}>
+        Tu biblioteca de líderes: los tuyos y los rivales que te vayas encontrando. Se reutilizan en mazos y partidas.
+      </p>
+      {leaders.length === 0 ? (
+        <EmptyState icon={Users} text="Aún no tienes líderes." sub="Agrega el primero para empezar." onAdd={() => setSheet(true)} cta="Agregar líder" />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          {leaders.map((l) => (
+            <div
+              key={l.id}
+              style={{
+                background: C.paper,
+                borderRadius: 10,
+                padding: "10px 8px",
+                textAlign: "center",
+                position: "relative",
+                boxShadow: "0 2px 0 rgba(0,0,0,0.15)",
+              }}
+            >
+              <div style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 2 }}>
+                <button onClick={() => setEditingLeader(l)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+                  <Pencil size={12} color="#7A8A80" />
+                </button>
+                <button onClick={() => setConfirmDelete(l)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+                  <Trash2 size={12} color="#7A8A80" />
+                </button>
+              </div>
+              <div
+                onClick={() => l.photo && openImage && openImage(l.photo, l.name)}
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: "50%",
+                  margin: "4px auto 6px",
+                  overflow: "hidden",
+                  background: "#0D100E",
+                  border: `1px solid ${C.paperShade}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: l.photo ? "pointer" : "default",
+                }}
+              >
+                {l.photo ? (
+                  <img src={l.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <Users size={22} color={C.inkSoft} />
+                )}
+              </div>
+              <span style={{ fontSize: 11.5, color: C.ink, fontWeight: 600, overflowWrap: "break-word" }}>{l.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Fab onClick={() => setSheet(true)} />
+
+      {sheet && (
+        <LeaderFormSheet
+          onClose={() => setSheet(false)}
+          onSave={(leader) => {
+            onAddLeader(leader);
+            setSheet(false);
+          }}
+        />
+      )}
+
+      {editingLeader && (
+        <LeaderFormSheet
+          initial={editingLeader}
+          onClose={() => setEditingLeader(null)}
+          onSave={(leader) => {
+            onUpdateLeader(leader);
+            setEditingLeader(null);
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="¿Eliminar líder?"
+        message={confirmDelete ? `Se eliminará "${confirmDelete.name}" de tu biblioteca. Esta acción no se puede deshacer.` : ""}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          onDeleteLeader(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+      />
+    </div>
+  );
+}
+
+function LeaderFormSheet({ initial, onClose, onSave }) {
+  const [name, setName] = useState(initial ? initial.name : "");
+  const [photo, setPhoto] = useState(initial ? initial.photo : null);
+
+  const save = (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSave({ id: initial ? initial.id : uid(), name: name.trim(), photo });
+  };
+
+  return (
+    <Sheet title={initial ? "Editar líder" : "Nuevo líder"} onClose={onClose}>
+      <form onSubmit={save}>
+        <Field label="Foto del líder">
+          <PhotoPicker value={photo} onChange={setPhoto} size={80} />
+        </Field>
+        <Field label="Nombre del líder">
+          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Monkey D. Luffy" style={inputStyle} />
+        </Field>
+        <button type="submit" style={goldButton}>
+          {initial ? "Guardar cambios" : "Guardar líder"}
+        </button>
+      </form>
+    </Sheet>
+  );
+}
+
+/* ---------- Decks tab ---------- */
+
+function DecksTab({ leaders, decks, cardsLibrary, onAddCardToLibrary, onAddDeck, onUpdateDeck, onDeleteDeck, onToggleArchiveDeck, onAddLeader }) {
+  const openImage = useContext(ImageViewerContext);
+  const [sheet, setSheet] = useState(false);
+  const [editingDeck, setEditingDeck] = useState(null);
+  const [expanded, setExpanded] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const activeDecks = decks.filter((d) => !d.archived);
+  const archivedDecks = decks.filter((d) => d.archived);
+
+  const renderDeck = (d) => {
+    const leader = leaders.find((l) => l.id === d.leaderId);
+    const open = expanded === d.id;
+    return (
+      <div key={d.id} style={{ background: C.paper, borderRadius: 10, padding: 14, boxShadow: "0 2px 0 rgba(0,0,0,0.15)", opacity: d.archived ? 0.7 : 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            onClick={() => leader && leader.photo && openImage && openImage(leader.photo, leader.name)}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: "50%",
+              overflow: "hidden",
+              background: "#0D100E",
+              border: `1px solid ${C.paperShade}`,
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: leader && leader.photo ? "pointer" : "default",
+            }}
+          >
+            {leader && leader.photo ? (
+              <img src={leader.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <Users size={18} color={C.inkSoft} />
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600, fontSize: 15, color: C.ink }}>{d.name}</div>
+            <div style={{ fontSize: 12, color: C.inkSoft }}>
+              {leader ? leader.name : "Sin líder"} · {d.cards.length} cartas
+              {d.archived && " · Archivado"}
+            </div>
+          </div>
+          <button onClick={() => setExpanded(open ? null : d.id)} style={{ background: "none", border: "none", cursor: "pointer" }}>
+            {open ? <ChevronUp size={18} color={C.inkSoft} /> : <ChevronDown size={18} color={C.inkSoft} />}
+          </button>
+          <button onClick={() => setEditingDeck(d)} style={{ background: "none", border: "none", cursor: "pointer" }}>
+            <Pencil size={14} color={C.inkSoft} />
+          </button>
+          <button onClick={() => onToggleArchiveDeck(d.id)} style={{ background: "none", border: "none", cursor: "pointer" }} title={d.archived ? "Restaurar mazo" : "Archivar mazo"}>
+            {d.archived ? <ArchiveRestore size={15} color="#7A8A80" /> : <Archive size={15} color="#7A8A80" />}
+          </button>
+          <button onClick={() => setConfirmDelete(d)} style={{ background: "none", border: "none", cursor: "pointer" }}>
+            <Trash2 size={15} color="#7A8A80" />
+          </button>
+        </div>
+
+        {open && (
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px dashed ${C.paperShade}` }}>
+            {d.cards.length === 0 ? (
+              <p style={{ fontSize: 12, color: C.inkSoft, margin: 0 }}>Sin cartas registradas.</p>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                {d.cards.map((c) => (
+                  <div key={c.id} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    <div
+                      onClick={() => c.photo && openImage && openImage(c.photo, c.name)}
+                      style={{
+                        position: "relative",
+                        width: "100%",
+                        aspectRatio: "5 / 7",
+                        borderRadius: 6,
+                        overflow: "hidden",
+                        background: "#0D100E",
+                        border: `1px solid ${C.paperShade}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: c.photo ? "pointer" : "default",
+                      }}
+                    >
+                      {c.photo ? (
+                        <img src={c.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <Layers size={16} color={C.inkSoft} />
+                      )}
+                      <span
+                        style={{
+                          position: "absolute",
+                          bottom: 3,
+                          right: 3,
+                          fontFamily: "'IBM Plex Mono', monospace",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          color: "#fff",
+                          background: "rgba(38,49,43,0.82)",
+                          borderRadius: 4,
+                          padding: "1px 4px",
+                        }}
+                      >
+                        x{c.copies}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: C.inkSoft,
+                        textAlign: "center",
+                        lineHeight: 1.15,
+                        overflowWrap: "break-word",
+                      }}
+                    >
+                      {c.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      {decks.length === 0 ? (
+        <EmptyState icon={Layers} text="Aún no tienes mazos." sub="Crea tu primer mazo para poder registrar torneos." onAdd={() => setSheet(true)} cta="Crear mazo" />
+      ) : (
+        <>
+          {activeDecks.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{activeDecks.map(renderDeck)}</div>
+          ) : (
+            <p style={{ fontSize: 12.5, color: C.inkSoft }}>Todos tus mazos están archivados.</p>
+          )}
+
+          {archivedDecks.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <button
+                onClick={() => setShowArchived(!showArchived)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: 0,
+                  marginBottom: showArchived ? 10 : 0,
+                }}
+              >
+                <Archive size={13} color={C.inkSoft} />
+                <span
+                  style={{
+                    fontFamily: "'Oswald', sans-serif",
+                    fontSize: 11,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    color: C.inkSoft,
+                  }}
+                >
+                  Archivados ({archivedDecks.length})
+                </span>
+                {showArchived ? <ChevronUp size={13} color={C.inkSoft} /> : <ChevronDown size={13} color={C.inkSoft} />}
+              </button>
+              {showArchived && <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{archivedDecks.map(renderDeck)}</div>}
+            </div>
+          )}
+        </>
+      )}
+
+      <Fab onClick={() => setSheet(true)} />
+
+      {sheet && (
+        <DeckSheet
+          leaders={leaders}
+          cardsLibrary={cardsLibrary}
+          onAddCardToLibrary={onAddCardToLibrary}
+          onAddLeader={onAddLeader}
+          onClose={() => setSheet(false)}
+          onSave={onAddDeck}
+        />
+      )}
+
+      {editingDeck && (
+        <DeckSheet
+          leaders={leaders}
+          cardsLibrary={cardsLibrary}
+          onAddCardToLibrary={onAddCardToLibrary}
+          onAddLeader={onAddLeader}
+          initial={editingDeck}
+          onClose={() => setEditingDeck(null)}
+          onSave={(deck) => {
+            onUpdateDeck(deck);
+            setEditingDeck(null);
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="¿Eliminar mazo?"
+        message={confirmDelete ? `Se eliminará "${confirmDelete.name}" junto con su lista de cartas. Si solo quieres dejar de usarlo, mejor archívalo. Esta acción no se puede deshacer.` : ""}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          onDeleteDeck(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+      />
+    </div>
+  );
+}
+
+function DeckSheet({ leaders, cardsLibrary, onAddCardToLibrary, onAddLeader, onClose, onSave, initial }) {
+  const [name, setName] = useState(initial ? initial.name : "");
+  const [leaderId, setLeaderId] = useState(initial ? initial.leaderId : null);
+  const [cards, setCards] = useState(initial ? initial.cards : []);
+  const [selectedCardId, setSelectedCardId] = useState(null);
+  const [pendingCopies, setPendingCopies] = useState("1");
+
+  const updateCopies = (rowId, value) => {
+    const n = Math.max(1, Number(value) || 1);
+    setCards(cards.map((c) => (c.id === rowId ? { ...c, copies: n } : c)));
+  };
+
+  const removeCard = (rowId) => setCards(cards.filter((c) => c.id !== rowId));
+
+  const addCardToDeck = () => {
+    if (!selectedCardId) return;
+    const libCard = cardsLibrary.find((c) => c.id === selectedCardId);
+    if (!libCard) return;
+    const copies = Math.max(1, Number(pendingCopies) || 1);
+    const existingIdx = cards.findIndex((c) => c.cardId === selectedCardId);
+    if (existingIdx >= 0) {
+      const next = [...cards];
+      next[existingIdx] = { ...next[existingIdx], copies };
+      setCards(next);
+    } else {
+      setCards([...cards, { id: uid(), cardId: libCard.id, name: libCard.name, photo: libCard.photo, copies }]);
+    }
+    setSelectedCardId(null);
+    setPendingCopies("1");
+  };
+
+  const save = (e) => {
+    e.preventDefault();
+    if (!name.trim() || !leaderId) return;
+    onSave({ id: initial ? initial.id : uid(), name: name.trim(), leaderId, cards, archived: initial ? !!initial.archived : false });
+    onClose();
+  };
+
+  return (
+    <Sheet title={initial ? "Editar mazo" : "Nuevo mazo"} onClose={onClose}>
+      <form onSubmit={save}>
+        <Field label="Nombre del mazo">
+          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Purple Law Control" style={inputStyle} />
+        </Field>
+
+        <Field label="Líder">
+          <LeaderPicker leaders={leaders} value={leaderId} onSelect={setLeaderId} onAddLeader={onAddLeader} />
+          {!leaderId && <p style={{ fontSize: 11, color: C.red, marginTop: 6 }}>Selecciona o crea un líder para este mazo.</p>}
+        </Field>
+
+        <Field label={`Cartas del mazo (${cards.length})`}>
+          {cards.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+              {cards.map((c) => (
+                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#0D100E", borderRadius: 8, padding: "6px 8px", border: `1px solid ${C.paperShade}` }}>
+                  {c.photo ? (
+                    <img src={c.photo} alt="" style={{ width: 26, height: 26, objectFit: "cover", borderRadius: 4 }} />
+                  ) : (
+                    <div style={{ width: 26, height: 26, borderRadius: 4, background: C.paperShade, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Layers size={12} color={C.inkSoft} />
+                    </div>
+                  )}
+                  <span style={{ fontSize: 12.5, color: C.ink, flex: 1, overflowWrap: "break-word" }}>{c.name}</span>
+                  <span style={{ fontSize: 10.5, color: C.inkSoft }}>copias</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="4"
+                    value={c.copies}
+                    onChange={(e) => updateCopies(c.id, e.target.value)}
+                    style={{ ...inputStyle, width: 42, padding: "4px 4px", textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }}
+                  />
+                  <button type="button" onClick={() => removeCard(c.id)} style={{ background: "none", border: "none", cursor: "pointer" }}>
+                    <X size={13} color={C.inkSoft} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p style={{ fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: C.inkSoft, marginBottom: 6, fontFamily: "'Oswald', sans-serif" }}>
+            Elige una carta de tu biblioteca (o crea una nueva)
+          </p>
+          <CardPicker cards={cardsLibrary} value={selectedCardId} onSelect={setSelectedCardId} onAddCard={onAddCardToLibrary} />
+
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
+            <span style={{ fontSize: 11.5, color: C.inkSoft, flexShrink: 0 }}>Copias en este mazo:</span>
+            <input
+              type="number"
+              min="1"
+              max="4"
+              value={pendingCopies}
+              onChange={(e) => setPendingCopies(e.target.value)}
+              style={{ ...inputStyle, width: 50, padding: "8px 6px", textAlign: "center" }}
+            />
+            <button
+              type="button"
+              onClick={addCardToDeck}
+              disabled={!selectedCardId}
+              style={{
+                background: selectedCardId ? C.ink : C.paperShade,
+                color: selectedCardId ? C.paper : C.inkSoft,
+                border: "none",
+                borderRadius: 8,
+                padding: "9px 14px",
+                fontSize: 12.5,
+                cursor: selectedCardId ? "pointer" : "default",
+                flex: 1,
+                fontFamily: "'Oswald', sans-serif",
+                letterSpacing: "0.02em",
+                textTransform: "uppercase",
+              }}
+            >
+              Agregar al mazo
+            </button>
+          </div>
+        </Field>
+
+        <button type="submit" style={goldButton}>
+          {initial ? "Guardar cambios" : "Guardar mazo"}
+        </button>
+      </form>
+    </Sheet>
+  );
+}
+
+/* ---------- Tournaments tab ---------- */
+
+function TournamentsTab({ tournaments, decks, leaders, leadersById, decksById, onAddTournament, onDeleteTournament, onUpdateTournament, onAddLeader }) {
+  const [sheet, setSheet] = useState(false);
+  const [expanded, setExpanded] = useState(null);
+  const [matchSheetFor, setMatchSheetFor] = useState(null);
+  const [editingMatch, setEditingMatch] = useState(null); // { tournamentId, match }
+
+  const playableDecks = decks.filter((d) => !d.archived);
+
+  if (decks.length === 0) {
+    return (
+      <EmptyState
+        icon={Layers}
+        text="Primero necesitas un mazo."
+        sub="Ve a la pestaña Mazos y crea el que vas a jugar en tus torneos."
+        onAdd={null}
+      />
+    );
+  }
+
+  return (
+    <div>
+      {tournaments.length === 0 ? (
+        <EmptyState
+          icon={Trophy}
+          text="Ningún torneo registrado todavía."
+          sub="Anota el primero y empieza tu historial."
+          onAdd={playableDecks.length > 0 ? () => setSheet(true) : null}
+          cta="Agregar torneo"
+        />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {tournaments.map((t) => {
+            const wins = t.matches.filter((m) => m.result === "win").length;
+            const losses = t.matches.filter((m) => m.result === "loss").length;
+            const open = expanded === t.id;
+            return (
+              <TournamentCard
+                key={t.id}
+                t={t}
+                deck={decksById[t.deckId]}
+                leadersById={leadersById}
+                wins={wins}
+                losses={losses}
+                open={open}
+                onToggle={() => setExpanded(open ? null : t.id)}
+                onDelete={() => onDeleteTournament(t.id)}
+                onAddMatch={() => setMatchSheetFor(t.id)}
+                onEditMatch={(match) => setEditingMatch({ tournamentId: t.id, match })}
+                onDeleteMatch={(matchId) =>
+                  onUpdateTournament(t.id, (tt) => ({ ...tt, matches: tt.matches.filter((m) => m.id !== matchId) }))
+                }
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {playableDecks.length > 0 && <Fab onClick={() => setSheet(true)} />}
+
+      {playableDecks.length === 0 && decks.length > 0 && tournaments.length > 0 && (
+        <p style={{ fontSize: 11.5, color: C.inkSoft, textAlign: "center", marginTop: 14 }}>
+          Todos tus mazos están archivados. Restaura alguno en la pestaña Mazos para registrar un nuevo torneo.
+        </p>
+      )}
+
+      {sheet && (
+        <NewTournamentSheet
+          decks={playableDecks}
+          leadersById={leadersById}
+          onClose={() => setSheet(false)}
+          onSave={onAddTournament}
+        />
+      )}
+
+      {matchSheetFor && (
+        <NewMatchSheet
+          leaders={leaders}
+          onAddLeader={onAddLeader}
+          onClose={() => setMatchSheetFor(null)}
+          onSave={(match) => {
+            onUpdateTournament(matchSheetFor, (tt) => ({ ...tt, matches: [match, ...tt.matches] }));
+            setMatchSheetFor(null);
+          }}
+        />
+      )}
+
+      {editingMatch && (
+        <NewMatchSheet
+          leaders={leaders}
+          onAddLeader={onAddLeader}
+          initial={editingMatch.match}
+          onClose={() => setEditingMatch(null)}
+          onSave={(match) => {
+            onUpdateTournament(editingMatch.tournamentId, (tt) => ({
+              ...tt,
+              matches: tt.matches.map((m) => (m.id === match.id ? match : m)),
+            }));
+            setEditingMatch(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function TournamentCard({ t, deck, leadersById, wins, losses, open, onToggle, onDelete, onAddMatch, onEditMatch, onDeleteMatch }) {
+  const leader = deck ? leadersById[deck.leaderId] : null;
+  const openImage = useContext(ImageViewerContext);
+  const [confirmDeleteTournament, setConfirmDeleteTournament] = useState(false);
+  const [confirmDeleteMatch, setConfirmDeleteMatch] = useState(null);
+  return (
+    <div style={{ background: C.paper, borderRadius: 6, padding: "16px 16px 14px", position: "relative", boxShadow: "0 3px 0 rgba(0,0,0,0.2), 0 8px 14px rgba(0,0,0,0.18)" }}>
+      {t.placement && (
+        <div
+          style={{
+            position: "absolute",
+            top: -10,
+            right: 14,
+            transform: "rotate(-6deg)",
+            border: `2px dashed ${wins > losses ? C.blue : losses > wins ? C.red : C.gray}`,
+            borderRadius: 8,
+            padding: "3px 9px",
+            background: C.paper,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "'Oswald', sans-serif",
+              fontWeight: 600,
+              fontSize: 11,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: wins > losses ? C.blue : losses > wins ? C.red : C.inkSoft,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {t.placement}
+          </span>
+        </div>
+      )}
+
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <div
+          onClick={() => leader && leader.photo && openImage && openImage(leader.photo, leader.name)}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            overflow: "hidden",
+            background: "#0D100E",
+            border: `1px solid ${C.paperShade}`,
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: leader && leader.photo ? "pointer" : "default",
+          }}
+        >
+          {leader && leader.photo ? <img src={leader.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Users size={16} color={C.inkSoft} />}
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600, fontSize: 16, color: C.ink, margin: 0, overflowWrap: "break-word" }}>{t.name}</h3>
+          <div style={{ fontSize: 12, color: C.inkSoft, marginTop: 2 }}>{deck ? deck.name : "Mazo eliminado"}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+            <CalendarDays size={12} color={C.inkSoft} />
+            <span style={{ fontSize: 12, color: C.inkSoft }}>{formatDate(t.date)}</span>
+          </div>
+        </div>
+        <button onClick={() => setConfirmDeleteTournament(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+          <Trash2 size={15} color="#7A8A80" />
+        </button>
+      </div>
+
+      <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.paperShade}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <button onClick={onToggle} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, fontSize: 14, color: wins > losses ? C.blue : losses > wins ? C.red : C.inkSoft }}>
+            {wins}-{losses}
+          </span>
+          <span style={{ fontSize: 11, color: C.inkSoft }}>· {t.matches.length} partidas</span>
+          {open ? <ChevronUp size={14} color={C.inkSoft} /> : <ChevronDown size={14} color={C.inkSoft} />}
+        </button>
+        <button onClick={onAddMatch} style={{ background: C.ink, color: C.paper, border: "none", borderRadius: 7, padding: "6px 10px", fontSize: 11.5, cursor: "pointer", fontFamily: "'Oswald', sans-serif", letterSpacing: "0.03em", textTransform: "uppercase" }}>
+          + Partida
+        </button>
+      </div>
+
+      {open && (
+        <div style={{ marginTop: 10 }}>
+          {t.matches.length === 0 ? (
+            <p style={{ fontSize: 12, color: C.inkSoft, margin: 0 }}>Sin partidas registradas todavía.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {t.matches.map((m, i) => {
+                const opp = leadersById[m.opponentLeaderId];
+                return (
+                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#0D100E", borderRadius: 8, padding: "7px 9px", border: `1px solid ${C.paperShade}` }}>
+                    <span
+                      style={{
+                        fontFamily: "'Oswald', sans-serif",
+                        fontWeight: 700,
+                        fontSize: 10,
+                        color: "#fff",
+                        background: m.result === "win" ? C.blue : C.red,
+                        borderRadius: 4,
+                        padding: "2px 6px",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {m.result === "win" ? "V" : "D"}
+                    </span>
+                    {opp && opp.photo ? (
+                      <img
+                        src={opp.photo}
+                        alt=""
+                        onClick={() => openImage && openImage(opp.photo, opp.name)}
+                        style={{ width: 22, height: 22, objectFit: "cover", borderRadius: "50%", cursor: "pointer", flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: C.paperShade, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Users size={11} color={C.inkSoft} />
+                      </div>
+                    )}
+                    <span style={{ fontSize: 12, color: C.ink, flex: 1, overflowWrap: "break-word" }}>vs {opp ? opp.name : "?"}</span>
+                    <span style={{ fontSize: 10.5, color: C.inkSoft, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+                      {m.wentFirst ? "1º" : "2º"}
+                      <Dices size={12} color={m.wonDie ? C.blue : C.red} strokeWidth={2.2} />
+                    </span>
+                    <button onClick={() => onEditMatch(m)} style={{ background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+                      <Pencil size={11} color={C.inkSoft} />
+                    </button>
+                    <button onClick={() => setConfirmDeleteMatch(m)} style={{ background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+                      <X size={12} color={C.inkSoft} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmDeleteTournament}
+        title="¿Eliminar torneo?"
+        message={`Se eliminará "${t.name}" con todas sus partidas registradas. Esta acción no se puede deshacer.`}
+        onCancel={() => setConfirmDeleteTournament(false)}
+        onConfirm={() => {
+          onDelete();
+          setConfirmDeleteTournament(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDeleteMatch}
+        title="¿Eliminar partida?"
+        message="Se eliminará este registro de partida. Esta acción no se puede deshacer."
+        onCancel={() => setConfirmDeleteMatch(null)}
+        onConfirm={() => {
+          onDeleteMatch(confirmDeleteMatch.id);
+          setConfirmDeleteMatch(null);
+        }}
+      />
+    </div>
+  );
+}
+
+function NewTournamentSheet({ decks, leadersById, onClose, onSave }) {
+  const [name, setName] = useState("");
+  const [deckId, setDeckId] = useState(decks[0] ? decks[0].id : "");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [placement, setPlacement] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const save = (e) => {
+    e.preventDefault();
+    if (!name.trim() || !deckId) return;
+    onSave({ id: uid(), name: name.trim(), deckId, date, placement: placement.trim(), notes: notes.trim(), matches: [] });
+    onClose();
+  };
+
+  return (
+    <Sheet title="Nuevo torneo" onClose={onClose}>
+      <form onSubmit={save}>
+        <Field label="Nombre del torneo">
+          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Regional de verano" style={inputStyle} />
+        </Field>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Field label="Mazo jugado" style={{ flex: 1 }}>
+            <select required value={deckId} onChange={(e) => setDeckId(e.target.value)} style={inputStyle}>
+              {decks.map((d) => {
+                const leader = leadersById[d.leaderId];
+                return (
+                  <option key={d.id} value={d.id}>
+                    {d.name} {leader ? `(${leader.name})` : ""}
+                  </option>
+                );
+              })}
+            </select>
+          </Field>
+          <Field label="Fecha" style={{ flex: 1 }}>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} />
+          </Field>
+        </div>
+        <Field label="Resultado / posición final">
+          <input value={placement} onChange={(e) => setPlacement(e.target.value)} placeholder="Ej. 1er lugar, Top 8" style={inputStyle} />
+        </Field>
+        <Field label="Notas">
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ ...inputStyle, resize: "vertical" }} />
+        </Field>
+        <button type="submit" style={goldButton}>
+          Crear torneo
+        </button>
+      </form>
+    </Sheet>
+  );
+}
+
+function NewMatchSheet({ leaders, onAddLeader, onClose, onSave, initial }) {
+  const [result, setResult] = useState(initial ? initial.result : "win");
+  const [wentFirst, setWentFirst] = useState(initial ? initial.wentFirst : true);
+  const [wonDie, setWonDie] = useState(initial ? initial.wonDie : true);
+  const [opponentLeaderId, setOpponentLeaderId] = useState(initial ? initial.opponentLeaderId : null);
+  const [notes, setNotes] = useState(initial ? initial.notes : "");
+
+  const save = (e) => {
+    e.preventDefault();
+    if (!opponentLeaderId) return;
+    onSave({ id: initial ? initial.id : uid(), result, wentFirst, wonDie, opponentLeaderId, notes: notes.trim() });
+  };
+
+  const toggleRow = (label, value, setValue, optA, optB) => (
+    <Field label={label}>
+      <div style={{ display: "flex", gap: 8 }}>
+        {[optA, optB].map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setValue(opt.value)}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              borderRadius: 8,
+              border: value === opt.value ? `2px solid ${C.gold}` : `1px solid ${C.paperShade}`,
+              background: value === opt.value ? "#332B18" : "#0D100E",
+              fontFamily: "'Oswald', sans-serif",
+              fontWeight: 600,
+              fontSize: 13,
+              color: C.ink,
+              cursor: "pointer",
+              letterSpacing: "0.02em",
+              textTransform: "uppercase",
+            }}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </Field>
+  );
+
+  return (
+    <Sheet title={initial ? "Editar partida" : "Nueva partida"} onClose={onClose}>
+      <form onSubmit={save}>
+        <IconToggle
+          label="Resultado"
+          icon={Trophy}
+          value={result === "win"}
+          onChange={(v) => setResult(v ? "win" : "loss")}
+          onLabel="Gané"
+          offLabel="Perdí"
+        />
+        {toggleRow("¿Cómo salí?", wentFirst, setWentFirst, { value: true, label: "Primero" }, { value: false, label: "Segundo" })}
+        <IconToggle
+          label="¿Gané el dado?"
+          icon={Dices}
+          value={wonDie}
+          onChange={setWonDie}
+          onLabel="Gané el dado"
+          offLabel="Perdí el dado"
+        />
+
+        <Field label="Mazo rival (líder)">
+          <LeaderPicker leaders={leaders} value={opponentLeaderId} onSelect={setOpponentLeaderId} onAddLeader={onAddLeader} />
+          {!opponentLeaderId && <p style={{ fontSize: 11, color: C.red, marginTop: 6 }}>Selecciona o crea el líder rival.</p>}
+        </Field>
+
+        <Field label="Notas">
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Mulligan, jugadas clave..." style={{ ...inputStyle, resize: "vertical" }} />
+        </Field>
+
+        <button type="submit" style={goldButton}>
+          {initial ? "Guardar cambios" : "Guardar partida"}
+        </button>
+      </form>
+    </Sheet>
+  );
+}
+
+/* ---------- Stats tab ---------- */
+
+function tally(matches) {
+  return {
+    wins: matches.filter((m) => m.result === "win").length,
+    losses: matches.filter((m) => m.result === "loss").length,
+  };
+}
+
+function RatioRow({ label, avatar, wins, losses }) {
+  const total = wins + losses;
+  const pct = total ? Math.round((wins / total) * 100) : 0;
+  const barColor = !total ? C.gray : pct >= 50 ? C.blue : C.red;
+  const textColor = !total ? C.inkSoft : pct >= 50 ? C.blue : C.red;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {avatar}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, gap: 6 }}>
+          <span style={{ fontSize: 11.5, color: C.ink, overflowWrap: "break-word" }}>{label}</span>
+          <span style={{ fontSize: 10.5, fontFamily: "'IBM Plex Mono', monospace", color: C.inkSoft, flexShrink: 0 }}>
+            {wins}-{losses}
+          </span>
+        </div>
+        <div style={{ height: 7, borderRadius: 4, background: C.paperShade, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 4 }} />
+        </div>
+      </div>
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          fontFamily: "'IBM Plex Mono', monospace",
+          color: textColor,
+          width: 36,
+          textAlign: "right",
+          flexShrink: 0,
+        }}
+      >
+        {total ? `${pct}%` : "—"}
+      </span>
+    </div>
+  );
+}
+
+function StatSection({ title, children }) {
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div
+        style={{
+          fontFamily: "'Oswald', sans-serif",
+          fontSize: 10,
+          letterSpacing: "0.07em",
+          textTransform: "uppercase",
+          color: C.inkSoft,
+          marginBottom: 6,
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{children}</div>
+    </div>
+  );
+}
+
+function LeaderAvatar({ leader, size = 22 }) {
+  const openImage = useContext(ImageViewerContext);
+  return leader && leader.photo ? (
+    <img
+      src={leader.photo}
+      alt=""
+      onClick={(e) => {
+        e.stopPropagation();
+        openImage && openImage(leader.photo, leader.name);
+      }}
+      style={{ width: size, height: size, objectFit: "cover", borderRadius: "50%", flexShrink: 0, cursor: "pointer" }}
+    />
+  ) : (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: C.paperShade,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <Users size={Math.round(size * 0.5)} color={C.inkSoft} />
+    </div>
+  );
+}
+
+function pctOf(wins, losses) {
+  const total = wins + losses;
+  return total ? Math.round((wins / total) * 100) : null;
+}
+
+function MatchupCard({ mu }) {
+  const overall = pctOf(mu.total.wins, mu.total.losses);
+  const first = pctOf(mu.first.wins, mu.first.losses);
+  const second = pctOf(mu.second.wins, mu.second.losses);
+  const overallColor = overall === null ? C.inkSoft : overall >= 50 ? C.blue : C.red;
+
+  const turnLine = (label, p, w, l) => (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 10.5 }}>
+      <span style={{ color: C.inkSoft }}>{label}</span>
+      <span style={{ color: C.inkSoft, fontFamily: "'IBM Plex Mono', monospace" }}>
+        {p === null ? "—" : `${p}%`} <span style={{ opacity: 0.7 }}>({w}-{l})</span>
+      </span>
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        background: "#0D100E",
+        border: `1px solid ${C.paperShade}`,
+        borderRadius: 10,
+        padding: "12px 10px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4,
+      }}
+    >
+      <LeaderAvatar leader={mu.leader} size={42} />
+      <span
+        style={{
+          fontSize: 11.5,
+          fontWeight: 600,
+          color: C.ink,
+          textAlign: "center",
+          lineHeight: 1.2,
+          overflowWrap: "break-word",
+        }}
+      >
+        {mu.leader ? mu.leader.name : "?"}
+      </span>
+      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, fontSize: 20, color: overallColor, lineHeight: 1 }}>
+        {overall === null ? "—" : `${overall}%`}
+      </span>
+      <span style={{ fontSize: 10, color: C.inkSoft, marginBottom: 4 }}>
+        {mu.total.wins}-{mu.total.losses} partidas
+      </span>
+      <div style={{ width: "100%", borderTop: `1px dashed ${C.paperShade}`, paddingTop: 5, display: "flex", flexDirection: "column", gap: 2 }}>
+        {turnLine("1º", first, mu.first.wins, mu.first.losses)}
+        {turnLine("2º", second, mu.second.wins, mu.second.losses)}
+      </div>
+    </div>
+  );
+}
+
+function StreakBadge({ streak }) {
+  if (streak.current === 0) return <span style={{ fontSize: 11.5, color: C.inkSoft }}>Sin partidas</span>;
+  const color = streak.currentType === "win" ? C.blue : C.red;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 600, color }}>
+      <Flame size={13} color={color} />
+      {streak.current}
+      {streak.currentType === "win" ? "V" : "D"} seguidas
+    </span>
+  );
+}
+
+function StreakCard({ streak }) {
+  const color = streak.current === 0 ? C.inkSoft : streak.currentType === "win" ? C.blue : C.red;
+  return (
+    <div style={{ background: C.paper, borderRadius: 10, padding: "10px 6px", textAlign: "center", boxShadow: "0 2px 0 rgba(0,0,0,0.15)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+        <Flame size={14} color={color} />
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, fontSize: 16, color }}>
+          {streak.current === 0 ? "—" : `${streak.current}${streak.currentType === "win" ? "V" : "D"}`}
+        </span>
+      </div>
+      <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 9.5, letterSpacing: "0.06em", textTransform: "uppercase", color: C.inkSoft, marginTop: 2 }}>
+        Racha actual
+      </div>
+    </div>
+  );
+}
+
+function csvEscape(value) {
+  const s = String(value ?? "");
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function StatsTab({ tournaments, decks, leadersById }) {
+  const [expanded, setExpanded] = useState(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // Todas las partidas de todos los torneos, con la fecha y el nombre del torneo adjuntos.
+  const allMatches = tournaments.flatMap((t) =>
+    t.matches.map((m) => ({ ...m, deckId: t.deckId, date: t.date, tournamentName: t.name }))
+  );
+  const scopedMatches = allMatches.filter((m) => (!dateFrom || m.date >= dateFrom) && (!dateTo || m.date <= dateTo));
+
+  const totalWins = scopedMatches.filter((m) => m.result === "win").length;
+  const totalLosses = scopedMatches.filter((m) => m.result === "loss").length;
+  const overallPct = scopedMatches.length ? Math.round((totalWins / scopedMatches.length) * 100) : null;
+  const overallStreak = computeStreaks(scopedMatches);
+
+  const deckStats = decks.map((d) => {
+    const matches = scopedMatches.filter((m) => m.deckId === d.id);
+    const wins = matches.filter((m) => m.result === "win").length;
+    const losses = matches.length - wins;
+    const pct = matches.length ? Math.round((wins / matches.length) * 100) : null;
+    const streak = computeStreaks(matches);
+
+    const turnFirst = tally(matches.filter((m) => m.wentFirst));
+    const turnSecond = tally(matches.filter((m) => !m.wentFirst));
+    const dieWon = tally(matches.filter((m) => m.wonDie));
+    const dieLost = tally(matches.filter((m) => !m.wonDie));
+
+    const byOpponent = {};
+    matches.forEach((m) => {
+      const key = m.opponentLeaderId || "unknown";
+      if (!byOpponent[key]) {
+        byOpponent[key] = {
+          total: { wins: 0, losses: 0 },
+          first: { wins: 0, losses: 0 },
+          second: { wins: 0, losses: 0 },
+        };
+      }
+      const bucket = byOpponent[key];
+      const outcome = m.result === "win" ? "wins" : "losses";
+      bucket.total[outcome] += 1;
+      (m.wentFirst ? bucket.first : bucket.second)[outcome] += 1;
+    });
+    const matchups = Object.entries(byOpponent)
+      .map(([leaderId, b]) => ({
+        leaderId,
+        leader: leadersById[leaderId],
+        total: b.total,
+        first: b.first,
+        second: b.second,
+        totalCount: b.total.wins + b.total.losses,
+      }))
+      .sort((a, b) => b.totalCount - a.totalCount);
+
+    return { deck: d, matches: matches.length, wins, losses, pct, streak, turnFirst, turnSecond, dieWon, dieLost, matchups };
+  });
+
+  const exportCSV = () => {
+    const rows = [["Fecha", "Torneo", "Mazo", "Líder propio", "Resultado", "Turno", "Dado", "Líder rival", "Notas"]];
+    scopedMatches.forEach((m) => {
+      const deck = decks.find((d) => d.id === m.deckId);
+      const ownLeader = deck ? leadersById[deck.leaderId] : null;
+      const oppLeader = leadersById[m.opponentLeaderId];
+      rows.push([
+        m.date || "",
+        m.tournamentName || "",
+        deck ? deck.name : "",
+        ownLeader ? ownLeader.name : "",
+        m.result === "win" ? "Victoria" : "Derrota",
+        m.wentFirst ? "1º" : "2º",
+        m.wonDie ? "Sí" : "No",
+        oppLeader ? oppLeader.name : "",
+        m.notes || "",
+      ]);
+    });
+    const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `partidas-onepiece-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 118, padding: "8px 8px", fontSize: 12 }} />
+        <span style={{ color: C.inkSoft, fontSize: 11 }}>a</span>
+        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 118, padding: "8px 8px", fontSize: 12 }} />
+        {(dateFrom || dateTo) && (
+          <button
+            onClick={() => {
+              setDateFrom("");
+              setDateTo("");
+            }}
+            style={{ background: "none", border: `1px solid ${C.paperShade}`, borderRadius: 8, padding: "7px 9px", cursor: "pointer" }}
+          >
+            <X size={12} color={C.inkSoft} />
+          </button>
+        )}
+      </div>
+
+      <button
+        onClick={exportCSV}
+        disabled={scopedMatches.length === 0}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          width: "100%",
+          background: "none",
+          border: `1px solid ${C.paperShade}`,
+          borderRadius: 8,
+          padding: "9px 0",
+          marginBottom: 16,
+          cursor: scopedMatches.length === 0 ? "default" : "pointer",
+          opacity: scopedMatches.length === 0 ? 0.5 : 1,
+        }}
+      >
+        <FileSpreadsheet size={14} color={C.inkSoft} />
+        <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 12, letterSpacing: "0.03em", textTransform: "uppercase", color: C.inkSoft }}>
+          Exportar CSV{dateFrom || dateTo ? " (filtrado)" : ""}
+        </span>
+      </button>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
+        <StatCard label="Partidas" value={scopedMatches.length} />
+        <StatCard label="Récord" value={`${totalWins}-${totalLosses}`} />
+        <StatCard label="% Victorias" value={overallPct === null ? "—" : `${overallPct}%`} />
+        <StreakCard streak={overallStreak} />
+      </div>
+
+      {decks.length === 0 ? (
+        <EmptyState icon={BarChart3} text="Sin datos todavía." sub="Crea mazos y registra partidas para ver tus métricas." onAdd={null} />
+      ) : (
+        <div>
+          <h3 style={{ fontFamily: "'Oswald', sans-serif", fontSize: 13, letterSpacing: "0.05em", textTransform: "uppercase", color: "#87968D", marginBottom: 8 }}>
+            Winratio por mazo
+          </h3>
+          <p style={{ fontSize: 11.5, color: "#87968D", marginTop: -4, marginBottom: 10 }}>
+            Suma todas tus partidas con ese mazo, en cualquier torneo{dateFrom || dateTo ? " (dentro del rango elegido)" : ""}.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {deckStats.map(({ deck, matches, wins, losses, pct, streak, turnFirst, turnSecond, dieWon, dieLost, matchups }) => {
+              const leader = leadersById[deck.leaderId];
+              const open = expanded === deck.id;
+              return (
+                <div key={deck.id} style={{ background: C.paper, borderRadius: 10, padding: 14, boxShadow: "0 2px 0 rgba(0,0,0,0.15)", opacity: deck.archived ? 0.7 : 1 }}>
+                  <button
+                    onClick={() => setExpanded(open ? null : deck.id)}
+                    style={{ background: "none", border: "none", cursor: "pointer", width: "100%", display: "flex", alignItems: "center", gap: 10, padding: 0 }}
+                  >
+                    <LeaderAvatar leader={leader} size={38} />
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <div style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600, fontSize: 14, color: C.ink }}>
+                        {deck.name}
+                        {deck.archived && <span style={{ fontSize: 10, color: C.inkSoft, textTransform: "none", fontWeight: 400 }}> · Archivado</span>}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: C.inkSoft }}>{matches} partidas</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, fontSize: 15, color: pct === null ? C.inkSoft : pct >= 50 ? C.blue : C.red }}>
+                        {pct === null ? "—" : `${pct}%`}
+                      </div>
+                      <div style={{ fontSize: 10.5, color: C.inkSoft }}>{wins}-{losses}</div>
+                    </div>
+                    {open ? <ChevronUp size={16} color={C.inkSoft} /> : <ChevronDown size={16} color={C.inkSoft} />}
+                  </button>
+
+                  {open && (
+                    <div style={{ marginTop: 4, paddingTop: 4 }}>
+                      {matches === 0 ? (
+                        <p style={{ fontSize: 12, color: C.inkSoft, margin: "10px 0 0" }}>Sin partidas registradas con este mazo.</p>
+                      ) : (
+                        <>
+                          <StatSection title="Racha">
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <span style={{ fontSize: 11.5, color: C.ink }}>Actual</span>
+                              <StreakBadge streak={streak} />
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <span style={{ fontSize: 11.5, color: C.ink }}>Mejor racha de victorias</span>
+                              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 600, color: C.blue }}>{streak.bestWin}V</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <span style={{ fontSize: 11.5, color: C.ink }}>Peor racha de derrotas</span>
+                              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 600, color: C.red }}>{streak.bestLoss}D</span>
+                            </div>
+                          </StatSection>
+
+                          <StatSection title="Según el turno (general)">
+                            <RatioRow label="Salí primero" wins={turnFirst.wins} losses={turnFirst.losses} />
+                            <RatioRow label="Salí segundo" wins={turnSecond.wins} losses={turnSecond.losses} />
+                          </StatSection>
+
+                          <StatSection title="Según el dado (general)">
+                            <RatioRow label="Gané el dado" wins={dieWon.wins} losses={dieWon.losses} />
+                            <RatioRow label="Perdí el dado" wins={dieLost.wins} losses={dieLost.losses} />
+                          </StatSection>
+
+                          <StatSection title="Por líder rival">
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                              {matchups.map((mu) => (
+                                <MatchupCard key={mu.leaderId} mu={mu} />
+                              ))}
+                            </div>
+                          </StatSection>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value }) {
+  return (
+    <div style={{ background: C.paper, borderRadius: 10, padding: "10px 8px", textAlign: "center", boxShadow: "0 2px 0 rgba(0,0,0,0.15)" }}>
+      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, fontSize: 19, color: C.ink }}>{value}</div>
+      <div style={{ fontFamily: "'Oswald', sans-serif", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.inkSoft, marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+function EmptyState({ icon: Icon, text, sub, onAdd, cta }) {
+  return (
+    <div style={{ textAlign: "center", marginTop: 60, padding: "0 20px" }}>
+      <Icon size={32} color="#4E6E5F" style={{ marginBottom: 12 }} />
+      <p style={{ color: C.paper, fontSize: 15, marginBottom: 4 }}>{text}</p>
+      {sub && <p style={{ color: "#87968D", fontSize: 13, marginBottom: 18 }}>{sub}</p>}
+      {onAdd && (
+        <button
+          onClick={onAdd}
+          style={{
+            background: C.ink,
+            color: C.feltDark,
+            border: "none",
+            borderRadius: 8,
+            padding: "10px 18px",
+            fontFamily: "'Oswald', sans-serif",
+            fontWeight: 600,
+            fontSize: 13,
+            letterSpacing: "0.03em",
+            textTransform: "uppercase",
+            cursor: "pointer",
+          }}
+        >
+          {cta}
+        </button>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+window.__appMounted = true;
+
+</script>
+</body>
+</html>
