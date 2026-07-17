@@ -2,6 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -427,6 +430,46 @@ const KEYS = {
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
+
+// Construye la URL pública de imagen de carta de egmanevents a partir del código (ej. "OP15-098").
+function eggmanImageUrl(code) {
+  return `https://deckbuilder.egmanevents.com/card_images/optcg/${code}.webp`;
+}
+
+// Parsea una lista de mazo tipo Egman Events: "COD-001:1,COD-002:4,..."
+// También acepta variantes sueltas como "4x COD-002" o "COD-002 4" por si el formato viene ligeramente distinto.
+function parseDeckList(text) {
+  const entries = [];
+  const raw = (text || "").trim();
+  if (!raw) return entries;
+  const parts = raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+  parts.forEach(part => {
+    let m = part.match(/^([A-Za-z0-9-]+)\s*:\s*(\d+)$/);
+    if (m) {
+      entries.push({
+        code: m[1].toUpperCase(),
+        qty: parseInt(m[2], 10)
+      });
+      return;
+    }
+    m = part.match(/^(\d+)\s*[xX]?\s+([A-Za-z0-9-]+)$/);
+    if (m) {
+      entries.push({
+        code: m[2].toUpperCase(),
+        qty: parseInt(m[1], 10)
+      });
+      return;
+    }
+    m = part.match(/^([A-Za-z0-9-]+)\s+(\d+)$/);
+    if (m) {
+      entries.push({
+        code: m[1].toUpperCase(),
+        qty: parseInt(m[2], 10)
+      });
+    }
+  });
+  return entries;
+}
 function formatDate(iso) {
   if (!iso) return "";
   const d = new Date(iso + "T00:00:00");
@@ -613,6 +656,7 @@ function App() {
     saveCardsLibrary(next);
     return card;
   };
+  const updateCardInLibrary = card => saveCardsLibrary(cardsLibrary.map(c => c.id === card.id ? card : c));
   const deleteCardFromLibrary = id => saveCardsLibrary(cardsLibrary.filter(c => c.id !== id));
   const addDeck = deck => saveDecks([{
     ...deck,
@@ -743,6 +787,7 @@ function App() {
     decks: decks,
     cardsLibrary: cardsLibrary,
     onAddCardToLibrary: addCardToLibrary,
+    onUpdateCardInLibrary: updateCardInLibrary,
     onAddDeck: addDeck,
     onUpdateDeck: updateDeck,
     onDeleteDeck: deleteDeck,
@@ -1516,11 +1561,15 @@ function CardPicker({
   cards,
   value,
   onSelect,
-  onAddCard
+  onAddCard,
+  onUpdateCard
 }) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [photo, setPhoto] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editPhoto, setEditPhoto] = useState(null);
   const save = () => {
     if (!name.trim()) return;
     const card = {
@@ -1534,6 +1583,21 @@ function CardPicker({
     setName("");
     setPhoto(null);
   };
+  const startEdit = card => {
+    setEditingId(card.id);
+    setEditName(card.name);
+    setEditPhoto(card.photo || null);
+    setCreating(false);
+  };
+  const saveEdit = () => {
+    if (!editName.trim() || !editingId) return;
+    onUpdateCard({
+      id: editingId,
+      name: editName.trim(),
+      photo: editPhoto
+    });
+    setEditingId(null);
+  };
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1543,20 +1607,25 @@ function CardPicker({
     }
   }, cards.map(c => {
     const active = value === c.id;
-    return /*#__PURE__*/React.createElement("button", {
-      type: "button",
+    return /*#__PURE__*/React.createElement("div", {
       key: c.id,
+      style: {
+        position: "relative",
+        flexShrink: 0,
+        width: 54
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
       onClick: () => onSelect(c.id),
       style: {
-        flexShrink: 0,
+        width: "100%",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         gap: 4,
         background: "none",
         border: "none",
-        cursor: "pointer",
-        width: 54
+        cursor: "pointer"
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -1590,7 +1659,32 @@ function CardPicker({
         lineHeight: 1.15,
         overflowWrap: "break-word"
       }
-    }, c.name));
+    }, c.name)), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: e => {
+        e.stopPropagation();
+        startEdit(c);
+      },
+      "aria-label": "Editar carta",
+      style: {
+        position: "absolute",
+        top: -4,
+        right: 2,
+        width: 18,
+        height: 18,
+        borderRadius: "50%",
+        background: C.ink,
+        border: `1px solid ${C.feltDark}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        padding: 0
+      }
+    }, /*#__PURE__*/React.createElement(Pencil, {
+      size: 9,
+      color: C.feltDark
+    })));
   }), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setCreating(true),
@@ -1672,6 +1766,70 @@ function CardPicker({
       setName("");
       setPhoto(null);
     },
+    style: {
+      flex: 1,
+      background: "none",
+      border: `1px solid ${C.paperShade}`,
+      borderRadius: 10,
+      fontSize: 12,
+      color: C.inkSoft,
+      cursor: "pointer"
+    }
+  }, "Cancelar"))), editingId && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10,
+      padding: 10,
+      background: "#0D100E",
+      borderRadius: 8,
+      border: `1px solid ${C.paperShade}`
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 10,
+      color: C.inkSoft,
+      marginTop: 0,
+      marginBottom: 8,
+      textTransform: "uppercase",
+      letterSpacing: "0.05em",
+      fontFamily: "'Oswald', sans-serif"
+    }
+  }, "Editar carta"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement(PhotoPicker, {
+    value: editPhoto,
+    onChange: setEditPhoto,
+    size: 52,
+    label: "Carta"
+  }), /*#__PURE__*/React.createElement("input", {
+    value: editName,
+    onChange: e => setEditName(e.target.value),
+    placeholder: "Nombre de la carta",
+    style: {
+      ...inputStyle,
+      flex: 1
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      marginTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: saveEdit,
+    style: {
+      ...goldButton,
+      padding: "8px 0",
+      fontSize: 12,
+      flex: 1
+    }
+  }, "Guardar cambios"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setEditingId(null),
     style: {
       flex: 1,
       background: "none",
@@ -1861,6 +2019,7 @@ function DecksTab({
   decks,
   cardsLibrary,
   onAddCardToLibrary,
+  onUpdateCardInLibrary,
   onAddDeck,
   onUpdateDeck,
   onDeleteDeck,
@@ -2118,6 +2277,7 @@ function DecksTab({
     leaders: leaders,
     cardsLibrary: cardsLibrary,
     onAddCardToLibrary: onAddCardToLibrary,
+    onUpdateCardInLibrary: onUpdateCardInLibrary,
     onAddLeader: onAddLeader,
     onClose: () => setSheetOpen(false),
     onSave: onAddDeck
@@ -2125,6 +2285,7 @@ function DecksTab({
     leaders: leaders,
     cardsLibrary: cardsLibrary,
     onAddCardToLibrary: onAddCardToLibrary,
+    onUpdateCardInLibrary: onUpdateCardInLibrary,
     onAddLeader: onAddLeader,
     initial: editingDeck,
     onClose: () => setEditingDeck(null),
@@ -2147,6 +2308,7 @@ function DeckSheet({
   leaders,
   cardsLibrary,
   onAddCardToLibrary,
+  onUpdateCardInLibrary,
   onAddLeader,
   onClose,
   onSave,
@@ -2157,6 +2319,79 @@ function DeckSheet({
   const [cards, setCards] = useState(initial ? initial.cards : []);
   const [selectedCardId, setSelectedCardId] = useState(null);
   const [pendingCopies, setPendingCopies] = useState("1");
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importMsg, setImportMsg] = useState(null); // { text, ok }
+
+  const handleImport = () => {
+    const entries = parseDeckList(importText);
+    if (entries.length === 0) {
+      setImportMsg({
+        text: "No se reconoció ningún código. Revisa el formato (ej. OP01-025:4,OP01-026:2).",
+        ok: false
+      });
+      return;
+    }
+    const [leaderEntry, ...cardEntries] = entries;
+    const localLeaders = [...leaders];
+    const findOrCreateLeader = code => {
+      const existing = localLeaders.find(l => l.code === code);
+      if (existing) return existing;
+      const created = {
+        id: uid(),
+        name: code,
+        code,
+        photo: eggmanImageUrl(code)
+      };
+      localLeaders.push(created);
+      onAddLeader(created);
+      return created;
+    };
+    const localCards = [...cardsLibrary];
+    const findOrCreateCard = code => {
+      const existing = localCards.find(c => c.code === code);
+      if (existing) return existing;
+      const created = {
+        id: uid(),
+        name: code,
+        code,
+        photo: eggmanImageUrl(code)
+      };
+      localCards.push(created);
+      onAddCardToLibrary(created);
+      return created;
+    };
+    const leader = findOrCreateLeader(leaderEntry.code);
+    setLeaderId(leader.id);
+    let nextCards = [...cards];
+    cardEntries.forEach(({
+      code,
+      qty
+    }) => {
+      const libCard = findOrCreateCard(code);
+      const idx = nextCards.findIndex(c => c.cardId === libCard.id);
+      if (idx >= 0) {
+        nextCards[idx] = {
+          ...nextCards[idx],
+          copies: qty
+        };
+      } else {
+        nextCards.push({
+          id: uid(),
+          cardId: libCard.id,
+          name: libCard.name,
+          photo: libCard.photo,
+          copies: qty
+        });
+      }
+    });
+    setCards(nextCards);
+    setImportText("");
+    setImportMsg({
+      text: `Importado: líder + ${cardEntries.length} cartas. Las imágenes se cargan desde egmanevents.com.`,
+      ok: true
+    });
+  };
   const updateCopies = (rowId, value) => {
     const n = Math.max(1, Number(value) || 1);
     setCards(cards.map(c => c.id === rowId ? {
@@ -2165,6 +2400,14 @@ function DeckSheet({
     } : c));
   };
   const removeCard = rowId => setCards(cards.filter(c => c.id !== rowId));
+  const handleCardUpdated = updatedCard => {
+    onUpdateCardInLibrary(updatedCard);
+    setCards(prev => prev.map(c => c.cardId === updatedCard.id ? {
+      ...c,
+      name: updatedCard.name,
+      photo: updatedCard.photo
+    } : c));
+  };
   const addCardToDeck = () => {
     if (!selectedCardId) return;
     const libCard = cardsLibrary.find(c => c.id === selectedCardId);
@@ -2215,7 +2458,75 @@ function DeckSheet({
     onChange: e => setName(e.target.value),
     placeholder: "Ej. Purple Law Control",
     style: inputStyle
-  })), /*#__PURE__*/React.createElement(Field, {
+  })), /*#__PURE__*/React.createElement(Field, null, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setShowImport(!showImport),
+    style: {
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      background: "none",
+      border: `1px dashed ${C.paperShade}`,
+      borderRadius: 8,
+      padding: "9px 0",
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement(FileSpreadsheet, {
+    size: 13,
+    color: C.inkSoft
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontFamily: "'Oswald', sans-serif",
+      fontSize: 11.5,
+      letterSpacing: "0.02em",
+      textTransform: "uppercase",
+      color: C.inkSoft
+    }
+  }, showImport ? "Ocultar importador" : "Importar lista de texto (Egman)")), showImport && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10,
+      padding: 10,
+      background: "#0D100E",
+      borderRadius: 8,
+      border: `1px solid ${C.paperShade}`
+    }
+  }, /*#__PURE__*/React.createElement("textarea", {
+    value: importText,
+    onChange: e => setImportText(e.target.value),
+    rows: 3,
+    placeholder: "OP01-001:1,OP01-025:4,OP01-026:2,...",
+    style: {
+      ...inputStyle,
+      resize: "vertical",
+      fontFamily: "'IBM Plex Mono', monospace",
+      fontSize: 12
+    }
+  }), /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 10.5,
+      color: C.inkSoft,
+      marginTop: 6,
+      marginBottom: 8,
+      lineHeight: 1.4
+    }
+  }, "Pega el formato tipo Egman Events: código:cantidad separados por comas (el mismo que copias del deck builder). La primera carta de la lista se toma como líder. Las imágenes se enlazan automáticamente por código — si algún código no tiene imagen ahí, puedes reemplazarla a mano después."), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: handleImport,
+    style: {
+      ...goldButton,
+      padding: "9px 0",
+      fontSize: 12.5
+    }
+  }, "Importar lista"), importMsg && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 11,
+      color: importMsg.ok ? C.blue : C.red,
+      marginTop: 8,
+      marginBottom: 0
+    }
+  }, importMsg.text))), /*#__PURE__*/React.createElement(Field, {
     label: "Líder"
   }, /*#__PURE__*/React.createElement(LeaderPicker, {
     leaders: leaders,
@@ -2319,7 +2630,8 @@ function DeckSheet({
     cards: cardsLibrary,
     value: selectedCardId,
     onSelect: setSelectedCardId,
-    onAddCard: onAddCardToLibrary
+    onAddCard: onAddCardToLibrary,
+    onUpdateCard: handleCardUpdated
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
