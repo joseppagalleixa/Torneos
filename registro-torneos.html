@@ -2253,13 +2253,16 @@ function DecksTab({
       style: {
         display: "flex",
         flexDirection: "column",
-        gap: 3
+        gap: 3,
+        minWidth: 0
       }
     }, /*#__PURE__*/React.createElement("div", {
       onClick: () => c.photo && openImage && openImage(c.photo, c.name),
       style: {
         position: "relative",
         width: "100%",
+        minWidth: 0,
+        minHeight: 0,
         aspectRatio: "5 / 7",
         borderRadius: 6,
         overflow: "hidden",
