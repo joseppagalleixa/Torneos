@@ -551,6 +551,8 @@ function SmartImg({
     className: className,
     onClick: onClick,
     onError: () => setBroken(true),
+    referrerPolicy: "no-referrer",
+    loading: "lazy",
     style: style
   });
 }
@@ -597,6 +599,7 @@ function ImageLightbox({
     src: viewer.src,
     alt: viewer.label || "",
     onClick: e => e.stopPropagation(),
+    referrerPolicy: "no-referrer",
     style: {
       maxWidth: "100%",
       maxHeight: "76vh",
