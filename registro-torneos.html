@@ -432,8 +432,24 @@ function uid() {
 }
 
 // Construye la URL pública de imagen de carta de egmanevents a partir del código (ej. "OP15-098").
-function eggmanImageUrl(code) {
-  return `https://deckbuilder.egmanevents.com/api/images/optcg/${code}.png`;
+function eggmanImageUrl(code, ext) {
+  return `https://deckbuilder.egmanevents.com/api/images/optcg/${code}.${ext}`;
+}
+const EGGMAN_BASE = "https://deckbuilder.egmanevents.com/";
+const EGGMAN_EXTENSIONS = ["png", "webp", "jpg", "jpeg"];
+
+// Devuelve la lista de URLs a intentar para la foto de un líder/carta.
+// Si viene de una importación por código (Egman Events), prueba varias extensiones en cascada,
+// porque el sitio no usa el mismo formato de archivo para todas las cartas.
+// Si es una foto propia (subida por el usuario), solo hay un candidato: esa misma foto.
+function photoCandidates(entity) {
+  if (!entity) return [];
+  const photo = entity.photo;
+  const code = entity.code;
+  if (code && photo && photo.indexOf(EGGMAN_BASE) === 0) {
+    return EGGMAN_EXTENSIONS.map(ext => eggmanImageUrl(code, ext));
+  }
+  return photo ? [photo] : [];
 }
 
 // Parsea una lista de mazo. Soporta el formato real que exportan sitios tipo Egman Events al copiar la
@@ -537,20 +553,26 @@ function computeStreaks(matchesNewestFirst) {
 // Imagen que, si falla al cargar (ej. enlace externo roto), muestra un respaldo en vez del ícono roto del navegador.
 function SmartImg({
   src,
+  candidates,
   alt,
   style,
   className,
   onClick,
   fallback
 }) {
-  const [broken, setBroken] = useState(false);
-  if (!src || broken) return fallback || null;
+  const list = candidates && candidates.length ? candidates : src ? [src] : [];
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    setIdx(0);
+  }, [list.join("|")]);
+  if (idx >= list.length) return fallback || null;
   return /*#__PURE__*/React.createElement("img", {
-    src: src,
+    key: list[idx],
+    src: list[idx],
     alt: alt || "",
     className: className,
     onClick: onClick,
-    onError: () => setBroken(true),
+    onError: () => setIdx(i => i + 1),
     referrerPolicy: "no-referrer",
     loading: "lazy",
     style: style
@@ -1483,7 +1505,7 @@ function LeaderPicker({
         justifyContent: "center"
       }
     }, l.photo ? /*#__PURE__*/React.createElement(SmartImg, {
-      src: l.photo,
+      candidates: photoCandidates(l),
       alt: "",
       style: {
         width: "100%",
@@ -1684,7 +1706,7 @@ function CardPicker({
         justifyContent: "center"
       }
     }, /*#__PURE__*/React.createElement(SmartImg, {
-      src: c.photo,
+      candidates: photoCandidates(c),
       alt: "",
       style: {
         width: "100%",
@@ -1975,7 +1997,7 @@ function LeadersTab({
       cursor: l.photo ? "pointer" : "default"
     }
   }, l.photo ? /*#__PURE__*/React.createElement(SmartImg, {
-    src: l.photo,
+    candidates: photoCandidates(l),
     alt: "",
     style: {
       width: "100%",
@@ -2118,7 +2140,7 @@ function DecksTab({
         cursor: leader && leader.photo ? "pointer" : "default"
       }
     }, leader && leader.photo ? /*#__PURE__*/React.createElement(SmartImg, {
-      src: leader.photo,
+      candidates: photoCandidates(leader),
       alt: "",
       style: {
         width: "100%",
@@ -2237,7 +2259,7 @@ function DecksTab({
         cursor: c.photo ? "pointer" : "default"
       }
     }, /*#__PURE__*/React.createElement(SmartImg, {
-      src: c.photo,
+      candidates: photoCandidates(c),
       alt: "",
       style: {
         width: "100%",
@@ -2395,7 +2417,7 @@ function DeckSheet({
         id: uid(),
         name: entry.name || entry.code,
         code: entry.code,
-        photo: eggmanImageUrl(entry.code)
+        photo: eggmanImageUrl(entry.code, "png")
       };
       localLeaders.push(created);
       onAddLeader(created);
@@ -2409,7 +2431,7 @@ function DeckSheet({
         id: uid(),
         name: entry.name || entry.code,
         code: entry.code,
-        photo: eggmanImageUrl(entry.code)
+        photo: eggmanImageUrl(entry.code, "png")
       };
       localCards.push(created);
       onAddCardToLibrary(created);
@@ -2424,6 +2446,9 @@ function DeckSheet({
       if (idx >= 0) {
         nextCards[idx] = {
           ...nextCards[idx],
+          name: libCard.name,
+          photo: libCard.photo,
+          code: libCard.code,
           copies: entry.qty
         };
       } else {
@@ -2432,6 +2457,7 @@ function DeckSheet({
           cardId: libCard.id,
           name: libCard.name,
           photo: libCard.photo,
+          code: libCard.code,
           copies: entry.qty
         });
       }
@@ -2496,6 +2522,9 @@ function DeckSheet({
       const next = [...cards];
       next[existingIdx] = {
         ...next[existingIdx],
+        name: libCard.name,
+        photo: libCard.photo,
+        code: libCard.code,
         copies
       };
       setCards(next);
@@ -2505,6 +2534,7 @@ function DeckSheet({
         cardId: libCard.id,
         name: libCard.name,
         photo: libCard.photo,
+        code: libCard.code,
         copies
       }]);
     }
@@ -2638,7 +2668,7 @@ function DeckSheet({
       border: `1px solid ${C.paperShade}`
     }
   }, /*#__PURE__*/React.createElement(SmartImg, {
-    src: c.photo,
+    candidates: photoCandidates(c),
     alt: "",
     style: {
       width: 26,
@@ -3003,7 +3033,7 @@ function TournamentCard({
       cursor: leader && leader.photo ? "pointer" : "default"
     }
   }, leader && leader.photo ? /*#__PURE__*/React.createElement(SmartImg, {
-    src: leader.photo,
+    candidates: photoCandidates(leader),
     alt: "",
     style: {
       width: "100%",
@@ -3155,7 +3185,7 @@ function TournamentCard({
         flexShrink: 0
       }
     }, m.result === "win" ? "V" : "D"), opp && opp.photo ? /*#__PURE__*/React.createElement(SmartImg, {
-      src: opp.photo,
+      candidates: photoCandidates(opp),
       alt: "",
       onClick: () => openImage && openImage(opp.photo, opp.name),
       style: {
@@ -3575,7 +3605,7 @@ function LeaderAvatar({
     color: C.inkSoft
   }));
   return leader && leader.photo ? /*#__PURE__*/React.createElement(SmartImg, {
-    src: leader.photo,
+    candidates: photoCandidates(leader),
     alt: "",
     className: "tap",
     onClick: e => {
