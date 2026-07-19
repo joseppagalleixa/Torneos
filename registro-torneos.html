@@ -436,37 +436,53 @@ function eggmanImageUrl(code) {
   return `https://deckbuilder.egmanevents.com/card_images/optcg/${code}.webp`;
 }
 
-// Parsea una lista de mazo tipo Egman Events: "COD-001:1,COD-002:4,..."
-// También acepta variantes sueltas como "4x COD-002" o "COD-002 4" por si el formato viene ligeramente distinto.
+// Parsea una lista de mazo. Soporta el formato real que exportan sitios tipo Egman Events al copiar la
+// lista completa: una carta por línea, "CANTIDAD CODIGO NOMBRE" (ej. "4 OP16-034 Monkey.D.Luffy").
+// También acepta el formato alterno de una sola línea separado por comas "COD:QTY,COD:QTY,...".
 function parseDeckList(text) {
   const entries = [];
   const raw = (text || "").trim();
   if (!raw) return entries;
-  const parts = raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
-  parts.forEach(part => {
-    let m = part.match(/^([A-Za-z0-9-]+)\s*:\s*(\d+)$/);
+  const lines = raw.split(/\n+/).map(s => s.trim()).filter(Boolean);
+  lines.forEach(line => {
+    let m = line.match(/^(\d+)\s+([A-Za-z0-9-]+)\s+(.+)$/);
     if (m) {
       entries.push({
-        code: m[1].toUpperCase(),
-        qty: parseInt(m[2], 10)
-      });
-      return;
-    }
-    m = part.match(/^(\d+)\s*[xX]?\s+([A-Za-z0-9-]+)$/);
-    if (m) {
-      entries.push({
+        qty: parseInt(m[1], 10),
         code: m[2].toUpperCase(),
-        qty: parseInt(m[1], 10)
+        name: m[3].trim()
       });
       return;
     }
-    m = part.match(/^([A-Za-z0-9-]+)\s+(\d+)$/);
-    if (m) {
-      entries.push({
-        code: m[1].toUpperCase(),
-        qty: parseInt(m[2], 10)
-      });
-    }
+    const pieces = line.split(",").map(s => s.trim()).filter(Boolean);
+    pieces.forEach(part => {
+      let mm = part.match(/^([A-Za-z0-9-]+)\s*:\s*(\d+)$/);
+      if (mm) {
+        entries.push({
+          code: mm[1].toUpperCase(),
+          qty: parseInt(mm[2], 10),
+          name: null
+        });
+        return;
+      }
+      mm = part.match(/^(\d+)\s*[xX]?\s+([A-Za-z0-9-]+)$/);
+      if (mm) {
+        entries.push({
+          code: mm[2].toUpperCase(),
+          qty: parseInt(mm[1], 10),
+          name: null
+        });
+        return;
+      }
+      mm = part.match(/^([A-Za-z0-9-]+)\s+(\d+)$/);
+      if (mm) {
+        entries.push({
+          code: mm[1].toUpperCase(),
+          qty: parseInt(mm[2], 10),
+          name: null
+        });
+      }
+    });
   });
   return entries;
 }
@@ -516,6 +532,27 @@ function computeStreaks(matchesNewestFirst) {
     bestWin,
     bestLoss
   };
+}
+
+// Imagen que, si falla al cargar (ej. enlace externo roto), muestra un respaldo en vez del ícono roto del navegador.
+function SmartImg({
+  src,
+  alt,
+  style,
+  className,
+  onClick,
+  fallback
+}) {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) return fallback || null;
+  return /*#__PURE__*/React.createElement("img", {
+    src: src,
+    alt: alt || "",
+    className: className,
+    onClick: onClick,
+    onError: () => setBroken(true),
+    style: style
+  });
 }
 function ImageLightbox({
   viewer,
@@ -1639,17 +1676,18 @@ function CardPicker({
         alignItems: "center",
         justifyContent: "center"
       }
-    }, c.photo ? /*#__PURE__*/React.createElement("img", {
+    }, /*#__PURE__*/React.createElement(SmartImg, {
       src: c.photo,
       alt: "",
       style: {
         width: "100%",
         height: "100%",
         objectFit: "cover"
-      }
-    }) : /*#__PURE__*/React.createElement(Layers, {
-      size: 18,
-      color: C.inkSoft
+      },
+      fallback: /*#__PURE__*/React.createElement(Layers, {
+        size: 18,
+        color: C.inkSoft
+      })
     })), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 9.5,
@@ -2183,17 +2221,18 @@ function DecksTab({
         justifyContent: "center",
         cursor: c.photo ? "pointer" : "default"
       }
-    }, c.photo ? /*#__PURE__*/React.createElement("img", {
+    }, /*#__PURE__*/React.createElement(SmartImg, {
       src: c.photo,
       alt: "",
       style: {
         width: "100%",
         height: "100%",
         objectFit: "cover"
-      }
-    }) : /*#__PURE__*/React.createElement(Layers, {
-      size: 16,
-      color: C.inkSoft
+      },
+      fallback: /*#__PURE__*/React.createElement(Layers, {
+        size: 16,
+        color: C.inkSoft
+      })
     }), /*#__PURE__*/React.createElement("span", {
       style: {
         position: "absolute",
@@ -2327,53 +2366,50 @@ function DeckSheet({
     const entries = parseDeckList(importText);
     if (entries.length === 0) {
       setImportMsg({
-        text: "No se reconoció ningún código. Revisa el formato (ej. OP01-025:4,OP01-026:2).",
+        text: "No se reconoció ningún código. Revisa el formato (ej. 4 OP16-034 Monkey.D.Luffy, una carta por línea).",
         ok: false
       });
       return;
     }
     const [leaderEntry, ...cardEntries] = entries;
     const localLeaders = [...leaders];
-    const findOrCreateLeader = code => {
-      const existing = localLeaders.find(l => l.code === code);
+    const findOrCreateLeader = entry => {
+      const existing = localLeaders.find(l => l.code === entry.code);
       if (existing) return existing;
       const created = {
         id: uid(),
-        name: code,
-        code,
-        photo: eggmanImageUrl(code)
+        name: entry.name || entry.code,
+        code: entry.code,
+        photo: eggmanImageUrl(entry.code)
       };
       localLeaders.push(created);
       onAddLeader(created);
       return created;
     };
     const localCards = [...cardsLibrary];
-    const findOrCreateCard = code => {
-      const existing = localCards.find(c => c.code === code);
+    const findOrCreateCard = entry => {
+      const existing = localCards.find(c => c.code === entry.code);
       if (existing) return existing;
       const created = {
         id: uid(),
-        name: code,
-        code,
-        photo: eggmanImageUrl(code)
+        name: entry.name || entry.code,
+        code: entry.code,
+        photo: eggmanImageUrl(entry.code)
       };
       localCards.push(created);
       onAddCardToLibrary(created);
       return created;
     };
-    const leader = findOrCreateLeader(leaderEntry.code);
+    const leader = findOrCreateLeader(leaderEntry);
     setLeaderId(leader.id);
     let nextCards = [...cards];
-    cardEntries.forEach(({
-      code,
-      qty
-    }) => {
-      const libCard = findOrCreateCard(code);
+    cardEntries.forEach(entry => {
+      const libCard = findOrCreateCard(entry);
       const idx = nextCards.findIndex(c => c.cardId === libCard.id);
       if (idx >= 0) {
         nextCards[idx] = {
           ...nextCards[idx],
-          copies: qty
+          copies: entry.qty
         };
       } else {
         nextCards.push({
@@ -2381,14 +2417,14 @@ function DeckSheet({
           cardId: libCard.id,
           name: libCard.name,
           photo: libCard.photo,
-          copies: qty
+          copies: entry.qty
         });
       }
     });
     setCards(nextCards);
     setImportText("");
     setImportMsg({
-      text: `Importado: líder + ${cardEntries.length} cartas. Las imágenes se cargan desde egmanevents.com.`,
+      text: `Importado: líder + ${cardEntries.length} cartas. Si alguna imagen no carga, tócala en el selector para reemplazarla a mano.`,
       ok: true
     });
   };
@@ -2495,8 +2531,8 @@ function DeckSheet({
   }, /*#__PURE__*/React.createElement("textarea", {
     value: importText,
     onChange: e => setImportText(e.target.value),
-    rows: 3,
-    placeholder: "OP01-001:1,OP01-025:4,OP01-026:2,...",
+    rows: 4,
+    placeholder: "1 OP16-022 Monkey.D.Luffy\n4 OP16-034 Monkey.D.Luffy\n4 OP16-055 Mr.2.Bon.Kurei",
     style: {
       ...inputStyle,
       resize: "vertical",
@@ -2511,7 +2547,7 @@ function DeckSheet({
       marginBottom: 8,
       lineHeight: 1.4
     }
-  }, "Pega el formato tipo Egman Events: código:cantidad separados por comas (el mismo que copias del deck builder). La primera carta de la lista se toma como líder. Las imágenes se enlazan automáticamente por código — si algún código no tiene imagen ahí, puedes reemplazarla a mano después."), /*#__PURE__*/React.createElement("button", {
+  }, "Pega la lista completa, una carta por línea: cantidad, código y nombre (el formato que copias de Egman Events). La primera línea se toma como líder. Las imágenes se intentan enlazar automáticamente por código — si alguna no carga, tócala en el selector de abajo para reemplazarla a mano."), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: handleImport,
     style: {
@@ -2559,7 +2595,7 @@ function DeckSheet({
       padding: "6px 8px",
       border: `1px solid ${C.paperShade}`
     }
-  }, c.photo ? /*#__PURE__*/React.createElement("img", {
+  }, /*#__PURE__*/React.createElement(SmartImg, {
     src: c.photo,
     alt: "",
     style: {
@@ -2567,21 +2603,22 @@ function DeckSheet({
       height: 26,
       objectFit: "cover",
       borderRadius: 4
-    }
-  }) : /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 26,
-      height: 26,
-      borderRadius: 4,
-      background: C.paperShade,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }
-  }, /*#__PURE__*/React.createElement(Layers, {
-    size: 12,
-    color: C.inkSoft
-  })), /*#__PURE__*/React.createElement("span", {
+    },
+    fallback: /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 26,
+        height: 26,
+        borderRadius: 4,
+        background: C.paperShade,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }
+    }, /*#__PURE__*/React.createElement(Layers, {
+      size: 12,
+      color: C.inkSoft
+    }))
+  }), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 12.5,
       color: C.ink,
@@ -3386,23 +3423,7 @@ function LeaderAvatar({
   size = 22
 }) {
   const openImage = useContext(ImageViewerContext);
-  return leader && leader.photo ? /*#__PURE__*/React.createElement("img", {
-    src: leader.photo,
-    alt: "",
-    className: "tap",
-    onClick: e => {
-      e.stopPropagation();
-      openImage && openImage(leader.photo, leader.name);
-    },
-    style: {
-      width: size,
-      height: size,
-      objectFit: "cover",
-      borderRadius: "50%",
-      flexShrink: 0,
-      cursor: "pointer"
-    }
-  }) : /*#__PURE__*/React.createElement("div", {
+  const fallback = /*#__PURE__*/React.createElement("div", {
     style: {
       width: size,
       height: size,
@@ -3417,6 +3438,24 @@ function LeaderAvatar({
     size: Math.round(size * 0.5),
     color: C.inkSoft
   }));
+  return leader && leader.photo ? /*#__PURE__*/React.createElement(SmartImg, {
+    src: leader.photo,
+    alt: "",
+    className: "tap",
+    onClick: e => {
+      e.stopPropagation();
+      openImage && openImage(leader.photo, leader.name);
+    },
+    style: {
+      width: size,
+      height: size,
+      objectFit: "cover",
+      borderRadius: "50%",
+      flexShrink: 0,
+      cursor: "pointer"
+    },
+    fallback: fallback
+  }) : fallback;
 }
 function pctOf(wins, losses) {
   const total = wins + losses;
